@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Django
+db.sqlite3
+
+# Ambiente / segredos (NAO versionar)
+.env
+
+# Dados pesados e modelos
+data/raw/*
+data/processed/*
+data/knowledge_base/*
+!data/**/.gitkeep
+*.gguf
+
+# SO
+.DS_Store
+
+# Claude
+.claude/
