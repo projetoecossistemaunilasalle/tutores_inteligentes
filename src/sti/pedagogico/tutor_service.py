@@ -28,11 +28,10 @@ def iniciar_sessao(perfil, resultados_iniciais, respostas_estilo):
             Ex.: ["visual", "visual", "pratico"]
 
     Returns:
-        dict: {
-            "nivel": str,
-            "estilo": str,
-            "plano": dict,
-        }
+        dict com as chaves:
+            nivel (str)
+            estilo (str)
+            plano (dict)
     """
     # 1) Define o nível e grava no perfil.
     nivel = avaliar_aluno_inicial(perfil, resultados_iniciais)
@@ -74,10 +73,9 @@ def obter_plano(perfil, conteudos):
         conteudos: lista de ConteudoAlgoritmos do domínio.
 
     Returns:
-        dict: {
-            "objetivos": list,
-            "trilha": list,
-            "estrategia": str,
-        }
+        dict com as chaves:
+            objetivos (list)
+            trilha (list)
+            estrategia (str)
     """
     return montar_plano(perfil, conteudos)

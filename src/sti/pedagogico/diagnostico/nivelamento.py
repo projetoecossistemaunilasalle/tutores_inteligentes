@@ -22,10 +22,9 @@ def nivelar_aluno(perfil, resultados_por_topico):
             Ex.: [("lacos", True), ("vetores", False)]
 
     Returns:
-        dict: {
-            "nivel": str,     # nível gravado no perfil
-            "analise": dict,  # saída de analisar_desempenho()
-        }
+        dict com as chaves:
+            nivel (str): nível gravado no perfil.
+            analise (dict): saída de analisar_desempenho().
     """
     # 1) Analisa o desempenho geral e por tópico.
     analise = analisar_desempenho(resultados_por_topico)

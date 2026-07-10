@@ -27,11 +27,10 @@ def analisar_desempenho(resultados_por_topico) -> dict:
             onde 'acertou' é booleano.
 
     Returns:
-        dict: {
-            "taxa_geral": float,          # % de acerto somando tudo
-            "por_topico": {str: float},   # % de acerto em cada tópico
-            "total": int,                 # quantidade de questões consideradas
-        }
+        dict com as chaves:
+            taxa_geral (float): % de acerto somando tudo.
+            por_topico (dict[str, float]): % de acerto em cada tópico.
+            total (int): quantidade de questões consideradas.
     """
     resultados_por_topico = list(resultados_por_topico)
 

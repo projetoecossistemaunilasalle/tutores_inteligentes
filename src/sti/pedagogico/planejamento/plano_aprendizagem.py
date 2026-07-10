@@ -20,11 +20,10 @@ def montar_plano(perfil, conteudos):
             (ConteudoAlgoritmos).
 
     Returns:
-        dict: {
-            "objetivos": list,   # o que o aluno deve alcançar
-            "trilha": list,      # tópicos na ordem de estudo
-            "estrategia": str,   # como ensinar
-        }
+        dict com as chaves:
+            objetivos (list): o que o aluno deve alcançar.
+            trilha (list): tópicos na ordem de estudo.
+            estrategia (str): como ensinar.
     """
     nivel = perfil.nivel_proficiencia
     estilo = perfil.estilo_aprendizado

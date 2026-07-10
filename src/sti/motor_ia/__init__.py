@@ -1,1 +1,4 @@
-"""Motor de IA — IA Estruturada, IA Embarcada (LLaMA/Mistral) e Motor de Decisao."""
+# src/sti/motor_ia/__init__.py
+"""Motor de IA — orquestra regras, RAG e LLM."""
+
+from .motor_decisao.orquestrador import responder
