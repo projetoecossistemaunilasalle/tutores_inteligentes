@@ -10,15 +10,17 @@ Ordem de decisão (mais barato -> mais caro):
 responder() é a única função que a Interface (Grupo 2) chama.
 """
 
-from sti.modulo_aluno.perfil.perfil_aluno import PerfilAluno
-from sti.modulo_aluno.historico.historico_interacoes import (
-    HistoricoInteracoes,
-)
-from sti.modulo_dominio.rag.buscador import buscar, montar_contexto
 from sti.motor_ia.ia_estruturada.motor_regras import (
     processar_com_regras,
 )
 from sti.motor_ia.ia_embarcada.llm_nuvem import gerar_resposta
+from sti.modulo_aluno.perfil.perfil_aluno import PerfilAluno
+from sti.modulo_aluno.historico.historico_interacoes import (
+    HistoricoInteracoes,
+)
+# from sti.modulo_dominio.rag.buscador import buscar, montar_contexto
+def buscar(pergunta, quantidade=3): return []
+def montar_contexto(trechos): return ""
 
 
 def responder(pergunta_aluno: str, aluno_id: str) -> dict:
