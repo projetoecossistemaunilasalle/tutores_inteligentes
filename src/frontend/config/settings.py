@@ -29,10 +29,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Apps do Grupo 2 (adicionar conforme for implementando)
-    # "frontend.usuarios",
-    # "frontend.conversas",
-    # "frontend.disciplinas",
+    "frontend.app",
+
 ]
 
 MIDDLEWARE = [
@@ -84,3 +82,4 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 API_BACKEND_URL = os.getenv(
     "API_BACKEND_URL", "http://127.0.0.1:8000"
 )
+AUTH_USER_MODEL = "app.Usuario"
