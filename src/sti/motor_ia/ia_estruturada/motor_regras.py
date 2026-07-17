@@ -1,41 +1,73 @@
-"""Tenta responder a pergunta do aluno via repositório Q&A e regras por palavra-chave,
-antes de acionar a LLM (Groq) — cada resposta aqui é custo zero de API."""
+"""
+IA Estruturada: responde com regras e Q&A, sem custo de API.
+Usa busca por similaridade (difflib) para reconhecer variações
+de palavras-chave sem precisar de correspondência exata.
 
+Ordem de tentativa:
+  1. Repositório Q&A (palavras-chave + similaridade)
+  2. Regras fixas (saudações, pedidos genéricos)
+  3. None -> passa para o RAG + Groq
+"""
+
+from difflib import SequenceMatcher
 from sti.modulo_dominio.repositorio_qa.repositorio import RepositorioQA
+
+# Limiar de similaridade: 0.0 a 1.0
+# 0.6 = 60% de similaridade — equilibra precisão e flexibilidade
+LIMIAR_SIMILARIDADE = 0.6
+
+
+def _similaridade(texto1, texto2):
+    """Calcula a similaridade entre dois textos (0.0 a 1.0)."""
+    return SequenceMatcher(
+        None,
+        texto1.lower(),
+        texto2.lower(),
+    ).ratio()
+
+
+def _palavra_encontrada(palavra, pergunta):
+    """Verifica se uma palavra está na pergunta por correspondência
+    exata ou por similaridade acima do limiar definido."""
+    pergunta_lower = pergunta.lower()
+    palavra_lower = palavra.lower().strip()
+
+    # 1) Correspondência exata
+    if palavra_lower in pergunta_lower:
+        return True
+
+    # 2) Similaridade por token (palavra por palavra da pergunta)
+    for token in pergunta_lower.split():
+        if _similaridade(palavra_lower, token) >= LIMIAR_SIMILARIDADE:
+            return True
+
+    return False
 
 
 def buscar_no_repositorio(pergunta):
-    """Busca no Q&A uma resposta já validada pelo professor.
+    """Busca no Q&A uma resposta validada pelo professor.
 
-    Compara a pergunta com as palavras-chave cadastradas.
-    Retorna a primeira resposta encontrada, ou None.
+    Usa correspondência exata e similaridade para reconhecer
+    variações das palavras-chave cadastradas.
 
     Args:
         pergunta: texto digitado pelo aluno.
 
     Returns:
-        str: resposta do repositório, ou None se não achou.
+        str: resposta encontrada, ou None.
     """
-    pergunta_lower = pergunta.lower()
-
-    # Busca nos registros ativos do repositório.
     registros = RepositorioQA.objects.filter(ativo=True)
 
     for registro in registros:
         palavras = registro.palavras_chave.lower().split(",")
-        # Se qualquer palavra-chave estiver na pergunta,
-        # considera uma correspondência.
-        if any(p.strip() in pergunta_lower for p in palavras):
+        if any(_palavra_encontrada(p, pergunta) for p in palavras):
             return registro.resposta
 
     return None
 
 
 def aplicar_regras(pergunta, nivel_aluno):
-    """Aplica regras simples baseadas no nível do aluno.
-
-    Regras básicas de fallback para casos comuns.
-    Retorna uma resposta ou None se nenhuma regra se aplicar.
+    """Aplica regras fixas para casos comuns.
 
     Args:
         pergunta: texto digitado pelo aluno.
@@ -57,7 +89,7 @@ def aplicar_regras(pergunta, nivel_aluno):
         )
 
     # Regra: pedido de ajuda genérico
-    if pergunta_lower in ["ajuda", "help", "socorro"]:
+    if pergunta_lower.strip() in ["ajuda", "help", "socorro"]:
         return (
             "Pode me contar com mais detalhes o que você "
             "está estudando? Assim consigo te ajudar melhor."
@@ -67,10 +99,9 @@ def aplicar_regras(pergunta, nivel_aluno):
 
 
 def processar_com_regras(pergunta, nivel_aluno):
-    """Tenta responder usando regras e Q&A.
+    """Ponto de entrada da IA Estruturada.
 
-    É o ponto de entrada da IA Estruturada. O orquestrador
-    chama esta função ANTES de acionar o Groq.
+    Tenta responder usando Q&A e regras antes de acionar o Groq.
 
     Args:
         pergunta: texto digitado pelo aluno.
@@ -79,15 +110,15 @@ def processar_com_regras(pergunta, nivel_aluno):
     Returns:
         str: resposta encontrada, ou None se precisar da LLM.
     """
-    # 1) Tenta o repositório Q&A primeiro.
+    # 1) Repositório Q&A com similaridade
     resposta = buscar_no_repositorio(pergunta)
     if resposta:
         return resposta
 
-    # 2) Tenta as regras simples.
+    # 2) Regras fixas
     resposta = aplicar_regras(pergunta, nivel_aluno)
     if resposta:
         return resposta
 
-    # 3) Não encontrou nada — sinaliza para usar a LLM.
+    # 3) Não encontrou — passa para RAG + Groq
     return None
