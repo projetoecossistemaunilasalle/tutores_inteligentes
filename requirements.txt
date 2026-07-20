@@ -4,15 +4,15 @@ djangorestframework
 python-dotenv
 
 # ===== Necessario ao implementar IA / RAG (instalar depois) =====
-# psycopg2-binary          # quando trocar SQLite por PostgreSQL
-# torch                    # IA embarcada
-# ollama                   # LLaMA / Mistral local
-# pymupdf
-# pdfplumber
-# sentence-transformers
-# chromadb
-# langchain
+psycopg2-binary          # quando trocar SQLite por PostgreSQL
+torch                    # IA embarcada
+ollama                   # LLaMA / Mistral local
+pymupdf
+pdfplumber
+sentence-transformers
+chromadb
+langchain
 
 # ===== Opcional: API leve para IA em tempo real =====
-# fastapi
-# uvicorn
+fastapi
+uvicorn
