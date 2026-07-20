@@ -2,23 +2,23 @@
 Ponto central do Motor de IA. Recebe a pergunta do aluno,
 aciona as camadas na ordem certa e devolve a resposta final.
 
-Ordem de decisão (mais barato -> mais caro):
+Ordem de decisao (mais barato -> mais caro):
   1. IA Estruturada (regras + Q&A) — sem custo
   2. RAG (busca no material do professor) — sem custo
-  3. LLM Groq (só se as anteriores não resolverem) — com custo
+  3. LLM Groq (so se as anteriores nao resolverem) — com custo
 
-responder() é a única função que a Interface (Grupo 2) chama.
+responder() e a unica funcao que a Interface (Grupo 2) chama.
 """
 
-from sti.motor_ia.ia_estruturada.motor_regras import (
-    processar_com_regras,
-)
-from sti.motor_ia.ia_embarcada.llm_nuvem import gerar_resposta
 from sti.modulo_aluno.perfil.perfil_aluno import PerfilAluno
 from sti.modulo_aluno.historico.historico_interacoes import (
     HistoricoInteracoes,
 )
 from sti.modulo_dominio.rag.buscador import buscar, montar_contexto
+from sti.motor_ia.ia_estruturada.motor_regras import (
+    processar_com_regras,
+)
+from sti.motor_ia.ia_embarcada.llm_nuvem import gerar_resposta
 
 
 def responder(pergunta_aluno: str, aluno_id: str) -> dict:
@@ -32,6 +32,7 @@ def responder(pergunta_aluno: str, aluno_id: str) -> dict:
         dict com as chaves:
             resposta (str): texto da resposta do tutor.
             fontes (list): trechos do RAG usados.
+            usou_rag (bool): se o RAG foi consultado.
             aluno_id (str): identificador do aluno.
     """
     # 1) Busca o perfil do aluno no banco.
@@ -43,8 +44,9 @@ def responder(pergunta_aluno: str, aluno_id: str) -> dict:
     resposta = processar_com_regras(pergunta_aluno, nivel)
     fontes = []
     origem = "regras"
+    usou_rag = False
 
-    # 3) Se as regras não resolveram, aciona o RAG + Groq.
+    # 3) Se as regras nao resolveram, aciona o RAG + Groq.
     if not resposta:
         trechos = buscar(pergunta_aluno)
         contexto = montar_contexto(trechos)
@@ -53,17 +55,21 @@ def responder(pergunta_aluno: str, aluno_id: str) -> dict:
         )
         fontes = trechos
         origem = "llm"
+        usou_rag = len(trechos) > 0  # True se RAG encontrou algo
 
-    # 4) Registra a interação no histórico.
+    # 4) Registra a interacao no historico com info do RAG.
     HistoricoInteracoes.objects.create(
         aluno=perfil,
         pergunta=pergunta_aluno,
         resposta=resposta,
         origem=origem,
+        usou_rag=usou_rag,
+        fontes_rag="\n---\n".join(fontes) if fontes else "",
     )
 
     return {
         "resposta": resposta,
         "fontes": fontes,
+        "usou_rag": usou_rag,
         "aluno_id": aluno_id,
     }

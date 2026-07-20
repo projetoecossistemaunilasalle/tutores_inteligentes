@@ -1,45 +1,43 @@
-"""Registra cada interação do aluno com o STI (pergunta, resposta, tópico e origem
-da resposta). Lido pelo módulo de Desempenho para analisar a evolução do aluno."""
+"""
+Modelo de historico de interacoes do aluno com o tutor.
+Registra cada conversa, incluindo agora se o RAG foi usado
+e quais fontes foram consultadas.
+"""
 
 from django.db import models
-
-# Importamos PerfilAluno para ligar cada interação ao aluno que a gerou.
 from sti.modulo_aluno.perfil.perfil_aluno import PerfilAluno
 
 
 class HistoricoInteracoes(models.Model):
-    """Uma única interação (pergunta + resposta) entre um aluno e o tutor."""
+    """Uma unica interacao (pergunta + resposta) com o tutor."""
 
     # ------------------------------------------------------------------ #
-    # 1) A QUEM PERTENCE ESTA INTERAÇÃO                                   #
+    # 1) A QUEM PERTENCE                                                   #
     # ------------------------------------------------------------------ #
-    # ForeignKey = ligação com outra tabela. Cada interação pertence a um
-    # PerfilAluno. 'related_name' permite acessar todas as interações de um
-    # aluno escrevendo:  aluno.interacoes.all()
     aluno = models.ForeignKey(
         PerfilAluno,
-        on_delete=models.CASCADE,   # se o aluno for apagado, apaga as interações
+        on_delete=models.CASCADE,
         related_name="interacoes",
         verbose_name="Aluno",
     )
 
     # ------------------------------------------------------------------ #
-    # 2) O CONTEÚDO DA INTERAÇÃO                                          #
+    # 2) CONTEUDO DA INTERACAO                                             #
     # ------------------------------------------------------------------ #
     pergunta = models.TextField("Pergunta do aluno")
-    resposta = models.TextField("Resposta dada pelo tutor")
+    resposta = models.TextField("Resposta do tutor")
     topico = models.CharField(
-        "Tópico / assunto",
+        "Topico / assunto",
         max_length=120,
-        blank=True,  # opcional: pode não estar identificado
+        blank=True,
     )
 
     # ------------------------------------------------------------------ #
-    # 3) QUAL IA RESPONDEU (controle de custo da hibridização)           #
+    # 3) ORIGEM DA RESPOSTA                                                #
     # ------------------------------------------------------------------ #
     ORIGEM_CHOICES = [
         ("regras", "IA Estruturada (regras) — sem custo"),
-        ("llm", "LLM em nuvem (Groq) — com custo"),
+        ("llm",    "LLM em nuvem (Groq) — com custo"),
     ]
     origem = models.CharField(
         "Origem da resposta",
@@ -48,20 +46,37 @@ class HistoricoInteracoes(models.Model):
         default="regras",
     )
 
+    # NOVO: indica se o RAG foi usado para fundamentar a resposta
+    usou_rag = models.BooleanField(
+        "Usou RAG (material do professor)",
+        default=False,
+    )
+
+    # NOVO: fontes consultadas pelo RAG (nomes dos PDFs)
+    fontes_rag = models.TextField(
+        "Fontes consultadas pelo RAG",
+        blank=True,
+        help_text="Trechos do material do professor usados na resposta.",
+    )
+
     # ------------------------------------------------------------------ #
-    # 4) QUANDO ACONTECEU (preenchido automaticamente)                   #
+    # 4) CONTROLE                                                          #
     # ------------------------------------------------------------------ #
     data_hora = models.DateTimeField(
         "Data e hora",
-        auto_now_add=True,  # gravado uma vez, no momento da criação
+        auto_now_add=True,
     )
 
     class Meta:
-        # Mesmo app de persistência do perfil (já registrado no settings.py).
         app_label = "banco_dados"
-        verbose_name = "Histórico de Interação"
-        verbose_name_plural = "Histórico de Interações"
-        ordering = ["-data_hora"]  # mais recentes primeiro
+        verbose_name = "Historico de Interacao"
+        verbose_name_plural = "Historico de Interacoes"
+        ordering = ["-data_hora"]
 
     def __str__(self):
-        return f"{self.aluno.nome} — {self.topico or 'sem tópico'} ({self.data_hora:%d/%m/%Y %H:%M})"
+        rag = " [RAG]" if self.usou_rag else ""
+        return (
+            f"{self.aluno.nome} — "
+            f"{self.topico or 'sem topico'}{rag} "
+            f"({self.data_hora:%d/%m/%Y %H:%M})"
+        )
