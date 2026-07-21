@@ -1,0 +1,22 @@
+[
+{
+  "model": "app.usuario",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$BcFN8bQkYM1pHJeL938S4v$mZiJ0Sdb2MideFX0gNMlBLn9m37q25b05kSqLkzsLXE=",
+    "last_login": "2026-07-17T17:59:37.639Z",
+    "is_superuser": true,
+    "username": "Marcos",
+    "first_name": "",
+    "last_name": "",
+    "email": "marqtrind@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-07-16T18:28:25.214Z",
+    "papel": "aluno",
+    "primeiro_acesso": true,
+    "identificador_aluno": null,
+    "groups": [],
+    "user_permissions": []
+  }
+}
+]

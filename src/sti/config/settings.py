@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",          # Django REST Framework
     "sti.banco_dados",         # app transversal (modelos do STI)
+    "frontend.app",              # app do frontend (views, templates, etc.)
 ]
 
 MIDDLEWARE = [
@@ -48,7 +49,7 @@ WSGI_APPLICATION = "sti.config.wsgi.application"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "src" / "frontend" / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {"context_processors": [
             "django.template.context_processors.request",
@@ -78,6 +79,18 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ------------------------------------------------------------------ #
 # CHAVES DAS IAs (lidas do .env)                                      #
 # ------------------------------------------------------------------ #
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")   # LLM (resposta + análise emocional)
+# LLM (resposta + análise emocional)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 EXA_API_KEY = os.getenv("EXA_API_KEY", "")     # busca semântica (RAG)
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")  # IA local (offline)
+OLLAMA_HOST = os.getenv(
+    "OLLAMA_HOST", "http://localhost:11434")  # IA local (offline)
+
+# ------------------------------------------------------------------ #
+# AUTENTICACAO E INTERFACE (Grupo 2)                                   #
+# Usuario customizado, arquivos estaticos e rotas de login/logout.     #
+# ------------------------------------------------------------------ #
+AUTH_USER_MODEL = "app.Usuario"
+STATICFILES_DIRS = [BASE_DIR / "src" / "frontend" / "static"]
+LOGIN_URL = "/aluno/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"

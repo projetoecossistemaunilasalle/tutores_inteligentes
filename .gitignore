@@ -23,3 +23,9 @@ data/knowledge_base/*
 
 # Claude
 .claude/
+
+# bancos que não são mais utilizados
+backup_g1.json
+backup_g2.json
+db_g1_antigo.sqlite3
+db_g2_antigo.sqlite3
