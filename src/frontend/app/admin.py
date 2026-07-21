@@ -22,8 +22,9 @@ from frontend.app.models.videoaulas import Videoaula
 # --- Usuarios ---
 @admin.register(Usuario)
 class UsuarioAdmin(UserAdmin):
-    list_display = ("username", "email", "papel", "ativo")
-    list_filter = ("papel", "ativo")
+    list_display = ("username", "email", "papel",
+                    "primeiro_acesso", "is_active")
+    list_filter = ("papel", "primeiro_acesso", "is_active")
 
 
 # --- Conteudo ---

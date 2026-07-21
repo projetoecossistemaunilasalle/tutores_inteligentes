@@ -2,6 +2,7 @@
 Modelo de Usuarios do frontend.
 Estende o usuario padrao do Django adicionando
 o papel (aluno ou professor) e dados de perfil visual.
+
 """
 
 from django.contrib.auth.models import AbstractUser
@@ -9,61 +10,73 @@ from django.db import models
 
 
 class Usuario(AbstractUser):
-    """Usuario do sistema — aluno ou professor."""
+    """
+    Usuário unificado do sistema.
 
-    PAPEL_CHOICES = [
-        ("aluno", "Aluno"),
-        ("professor", "Professor"),
-    ]
+    Herda de AbstractUser para aproveitar toda a autenticação nativa
+    do Django: login, logout, hash de senha, troca de senha, sessões
+    e integração com o painel /admin/.
 
-    # ------------------------------------------------------------------ #
-    # 1) PAPEL NO SISTEMA                                                  #
-    # ------------------------------------------------------------------ #
+    Campos herdados do AbstractUser (não precisam ser redeclarados):
+        username, first_name, last_name, email, password,
+        is_staff, is_active, is_superuser, last_login, date_joined
+    """
+
+    class Papel(models.TextChoices):
+        ALUNO = "aluno", "Aluno"
+        PROFESSOR = "professor", "Professor"
+
     papel = models.CharField(
-        "Papel",
         max_length=20,
-        choices=PAPEL_CHOICES,
-        default="aluno",
+        choices=Papel.choices,
+        default=Papel.ALUNO,
+        verbose_name="Papel",
+        help_text="Define o tipo de acesso do usuário no sistema.",
     )
 
-    # ------------------------------------------------------------------ #
-    # 2) PERFIL VISUAL                                                     #
-    # ------------------------------------------------------------------ #
-    avatar_sigla = models.CharField(
-        "Sigla do avatar",
-        max_length=2,
-        blank=True,
-    )
-    avatar_cor = models.CharField(
-        "Cor do avatar",
-        max_length=40,
-        blank=True,
-        default="#1a73e8",
+    primeiro_acesso = models.BooleanField(
+        default=True,
+        verbose_name="Primeiro acesso",
+        help_text=(
+            "Quando verdadeiro, o usuário é obrigado a trocar a senha "
+            "no próximo login. Usado principalmente para professores "
+            "cadastrados pelo administrador com senha temporária."
+        ),
     )
 
-    # ------------------------------------------------------------------ #
-    # 3) CONTROLE                                                          #
-    # ------------------------------------------------------------------ #
-    ativo = models.BooleanField("Ativo", default=True)
-    ultimo_login_sti = models.DateTimeField(
-        "Ultimo login no STI",
+    identificador_aluno = models.CharField(
+        max_length=50,
+        blank=True,
         null=True,
-        blank=True,
+        unique=True,
+        verbose_name="Identificador do aluno (Grupo 1)",
+        help_text=(
+            "Vínculo com o registro do aluno no backend do Grupo 1. "
+            "Usado nas chamadas à API, por exemplo /api/desempenho/<id>/. "
+            "Deixar em branco para professores."
+        ),
     )
 
     class Meta:
-        verbose_name = "Usuario"
-        verbose_name_plural = "Usuarios"
+        db_table = "usuario"
+        verbose_name = "Usuário"
+        verbose_name_plural = "Usuários"
+        ordering = ["username"]
 
     def __str__(self):
-        return f"{self.get_full_name()} ({self.papel})"
+        return f"{self.username} ({self.get_papel_display()})"
 
     @property
-    def eh_professor(self):
-        """Verifica se o usuario e professor."""
-        return self.papel == "professor"
+    def eh_aluno(self) -> bool:
+        """Retorna True se o usuário for aluno."""
+        return self.papel == self.Papel.ALUNO
 
     @property
-    def eh_aluno(self):
-        """Verifica se o usuario e aluno."""
-        return self.papel == "aluno"
+    def eh_professor(self) -> bool:
+        """Retorna True se o usuário for professor."""
+        return self.papel == self.Papel.PROFESSOR
+
+    def concluir_primeiro_acesso(self):
+        """Marca que o usuário já trocou a senha inicial."""
+        self.primeiro_acesso = False
+        self.save(update_fields=["primeiro_acesso"])
