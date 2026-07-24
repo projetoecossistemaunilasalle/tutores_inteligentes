@@ -13,7 +13,6 @@ from sti.modulo_dominio.base_conhecimento.conteudo_algoritmos import (
 from sti.modulo_dominio.repositorio_qa.repositorio import RepositorioQA
 from sti.modulo_dominio.exercicios.exercicio import Exercicio
 from sti.modulo_dominio.exercicios.gabarito import Gabarito
-from sti.banco_dados.models.videoaulas import Videoaula
 
 
 @admin.register(PerfilAluno)
@@ -59,10 +58,3 @@ class ExercicioAdmin(admin.ModelAdmin):
 class GabaritoAdmin(admin.ModelAdmin):
     list_display = ("exercicio", "atualizado_em")
     search_fields = ("resposta_correta",)
-
-
-@admin.register(Videoaula)
-class VideoaulaAdmin(admin.ModelAdmin):
-    list_display = ("titulo", "topico", "ativo", "criado_em")
-    list_filter = ("ativo",)
-    search_fields = ("titulo", "descricao")

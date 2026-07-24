@@ -41,6 +41,14 @@ class Videoaula(models.Model):
         related_name="videoaulas",
         verbose_name="Licao",
     )
+    topico = models.ForeignKey(
+        "banco_dados.ConteudoAlgoritmos",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="videoaulas",
+        verbose_name="Topico da base de conhecimento",
+    )
     ordem = models.PositiveSmallIntegerField("Ordem", default=0)
 
     # ------------------------------------------------------------------ #
