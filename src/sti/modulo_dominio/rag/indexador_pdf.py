@@ -15,7 +15,7 @@ import pdfplumber
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-MODELO_EMBEDDINGS = "paraphrase-MiniLM-L3-v2"
+MODELO_EMBEDDINGS = "paraphrase-multilingual-MiniLM-L12-v2"
 PASTA_PDFS = "data/raw"
 PASTA_VETORES = "data/processed/vetores"
 
@@ -46,8 +46,10 @@ def limpar_texto(texto):
     for linha in texto.split('\n'):
         linha = linha.strip()
 
-        # Ignora linhas muito curtas
-        if len(linha) < 15:
+        # Ignora linhas curtas, MAS preserva titulos em maiusculas
+        # (ex.: "ALGORITMO NATURAL:") que sao secoes relevantes.
+        eh_titulo = linha.isupper() and len(linha) >= 4
+        if len(linha) < 15 and not eh_titulo:
             continue
 
         # Ignora cabecalhos e rodapes
@@ -68,7 +70,7 @@ def limpar_texto(texto):
     return texto_limpo
 
 
-def dividir_em_pedacos(texto, tamanho=600, sobreposicao=80):
+def dividir_em_pedacos(texto, tamanho=600, sobreposicao=200):
     """Divide o texto em pedacos menores com sobreposicao.
 
     Tamanho menor (600) para pedacos mais precisos.

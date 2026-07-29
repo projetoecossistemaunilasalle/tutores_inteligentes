@@ -10,7 +10,7 @@ Modelo: paraphrase-MiniLM-L3-v2
 import chromadb
 from sentence_transformers import SentenceTransformer
 
-MODELO_EMBEDDINGS = "paraphrase-MiniLM-L3-v2"
+MODELO_EMBEDDINGS = "paraphrase-multilingual-MiniLM-L12-v2"
 PASTA_VETORES = "data/processed/vetores"
 
 
