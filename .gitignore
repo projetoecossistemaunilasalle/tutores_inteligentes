@@ -29,3 +29,7 @@ backup_g1.json
 backup_g2.json
 db_g1_antigo.sqlite3
 db_g2_antigo.sqlite3
+diag_busca.py
+diag_busca5.py
+diag_rag.py
+reindexar.py
