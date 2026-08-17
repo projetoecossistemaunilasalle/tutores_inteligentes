@@ -15,7 +15,7 @@ import pdfplumber
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-MODELO_EMBEDDINGS = "paraphrase-multilingual-MiniLM-L12-v2"
+MODELO_EMBEDDINGS = "intfloat/multilingual-e5-small"
 PASTA_PDFS = "data/raw"
 PASTA_VETORES = "data/processed/vetores"
 
@@ -63,27 +63,49 @@ def limpar_texto(texto):
 
         linhas_limpas.append(linha)
 
-    # 3) Junta as linhas e remove espacos excessivos
-    texto_limpo = ' '.join(linhas_limpas)
-    texto_limpo = re.sub(r'\s+', ' ', texto_limpo).strip()
+  # 3) Junta as linhas preservando quebras entre elas
+    texto_limpo = '\n'.join(linhas_limpas)
+    # colapsa espacos horizontais, mas mantem as quebras de linha
+    texto_limpo = re.sub(r'[ \t]+', ' ', texto_limpo).strip()
 
     return texto_limpo
 
 
-def dividir_em_pedacos(texto, tamanho=600, sobreposicao=200):
-    """Divide o texto em pedacos menores com sobreposicao.
+def dividir_em_pedacos(texto, tamanho=700, sobreposicao=1):
+    """Divide o texto em pedacos respeitando fronteiras de sentenca.
 
-    Tamanho menor (600) para pedacos mais precisos.
-    Sobreposicao maior (80) para nao perder contexto.
+    Em vez de cortar em um numero fixo de caracteres (o que partia
+    palavras e titulos no meio), agrupa sentencas inteiras ate atingir
+    ~700 caracteres. Mantem 'sobreposicao' sentencas do fim de um pedaco
+    no inicio do proximo, para nao perder contexto entre eles.
     """
+    # Quebra em sentencas: por pontuacao final OU por quebra de linha
+    # (titulos e itens de lista costumam vir em linha propria).
+    bruto = re.split(r'(?<=[.:!?])\s+|\n+', texto)
+    sentencas = [s.strip() for s in bruto if s and len(s.strip()) > 1]
+
     pedacos = []
-    inicio = 0
-    while inicio < len(texto):
-        fim = inicio + tamanho
-        pedaco = texto[inicio:fim].strip()
-        if len(pedaco) > 50:  # ignora pedacos muito pequenos
+    atual = []
+    tam_atual = 0
+
+    for sent in sentencas:
+        atual.append(sent)
+        tam_atual += len(sent) + 1
+
+        if tam_atual >= tamanho:
+            pedaco = ' '.join(atual).strip()
+            if len(pedaco) > 50:
+                pedacos.append(pedaco)
+            # mantem as ultimas 'sobreposicao' sentencas como contexto
+            atual = atual[-sobreposicao:] if sobreposicao > 0 else []
+            tam_atual = sum(len(s) + 1 for s in atual)
+
+    # ultimo pedaco que sobrou
+    if atual:
+        pedaco = ' '.join(atual).strip()
+        if len(pedaco) > 50:
             pedacos.append(pedaco)
-        inicio = fim - sobreposicao
+
     return pedacos
 
 
@@ -102,7 +124,10 @@ def indexar_pdfs(pasta=PASTA_PDFS):
         print("Colecao anterior removida.")
     except Exception:
         pass
-    colecao = cliente.create_collection("conteudo")
+    colecao = cliente.create_collection(
+        "conteudo",
+        metadata={"hnsw:space": "cosine"},
+    )
 
     total = 0
     arquivos = [
@@ -133,7 +158,8 @@ def indexar_pdfs(pasta=PASTA_PDFS):
         pedacos = dividir_em_pedacos(texto_completo)
         print(f"  {len(pedacos)} pedacos gerados apos limpeza")
 
-        vetores = modelo.encode(pedacos).tolist()
+        pedacos_prefixados = [f"passage: {p}" for p in pedacos]
+        vetores = modelo.encode(pedacos_prefixados).tolist()
         ids = [f"{arquivo}-{i}" for i in range(len(pedacos))]
 
         colecao.add(
