@@ -7,7 +7,7 @@ sem acrescentar conhecimento proprio.
 import os
 from groq import Groq
 
-MODELO_GROQ = "llama-3.1-8b-instant"
+MODELO_GROQ = "openai/gpt-oss-20b"
 
 
 def _cliente_groq():
