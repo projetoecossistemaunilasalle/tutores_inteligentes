@@ -1,7 +1,14 @@
 """
-Cliente do Groq com prompt restritivo ao material do professor.
-O Groq deve responder APENAS com base no contexto do RAG,
-sem acrescentar conhecimento proprio.
+Cliente do Groq com dois modos de resposta:
+
+  - modo="material": responde APENAS com base no material do RAG
+    (comportamento original, fiel ao conteudo do professor).
+
+  - modo="conhecimento_geral": quando o RAG nao encontrou material
+    relevante, o tutor responde com seu conhecimento geral de
+    Algoritmos e Programacao, avisando ao aluno que a resposta NAO
+    veio do material da disciplina (Opcao 2 — nao deixar o aluno
+    sem resposta).
 """
 
 import os
@@ -15,10 +22,10 @@ def _cliente_groq():
     return Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-def montar_prompt(pergunta, contexto_rag, nivel, estilo):
-    """Monta o prompt restritivo ao material do professor."""
+def montar_prompt(pergunta, contexto_rag, nivel, estilo, modo="material"):
+    """Monta o prompt conforme o modo de resposta."""
 
-    if contexto_rag.strip():
+    if modo == "material" and contexto_rag.strip():
         instrucao = (
             f"Voce e um tutor de Algoritmos e Programacao. "
             f"O aluno esta no nivel {nivel} e aprende melhor "
@@ -33,14 +40,21 @@ def montar_prompt(pergunta, contexto_rag, nivel, estilo):
             f"MATERIAL DO PROFESSOR:\n{contexto_rag}"
         )
     else:
-        # Sem contexto do RAG — informa ao aluno
+        # modo == "conhecimento_geral" (Opcao 2)
+        # O RAG nao encontrou material relevante. O tutor responde
+        # com conhecimento geral, avisando a origem ao aluno.
         instrucao = (
             f"Voce e um tutor de Algoritmos e Programacao. "
-            f"O aluno esta no nivel {nivel}. "
-            f"Nao ha material especifico disponivel sobre este "
-            f"assunto ainda. Informe ao aluno que o professor "
-            f"ainda nao cadastrou material sobre este topico e "
-            f"sugira que ele consulte o professor diretamente."
+            f"O aluno esta no nivel {nivel} e aprende melhor "
+            f"de forma {estilo}. "
+            f"O material da disciplina nao cobre este assunto "
+            f"especifico. Responda a pergunta do aluno com seu "
+            f"conhecimento geral de Algoritmos e Programacao, de "
+            f"forma clara e didatica, adequada ao nivel do aluno. "
+            f"IMPORTANTE: comece a resposta avisando o aluno de "
+            f"que esta informacao NAO foi encontrada no material "
+            f"da disciplina e que se trata de uma explicacao geral. "
+            f"Sugira que ele confirme o conteudo com o professor."
         )
 
     return [
@@ -49,27 +63,30 @@ def montar_prompt(pergunta, contexto_rag, nivel, estilo):
     ]
 
 
-def gerar_resposta(pergunta, contexto_rag, nivel, estilo):
-    """Chama o Groq e devolve a resposta baseada no material.
+def gerar_resposta(pergunta, contexto_rag, nivel, estilo, modo="material"):
+    """Chama o Groq e devolve a resposta.
 
     Args:
         pergunta: texto digitado pelo aluno.
-        contexto_rag: trechos encontrados pelo RAG.
+        contexto_rag: trechos encontrados pelo RAG (vazio no modo
+            conhecimento_geral).
         nivel: nivel de proficiencia do aluno.
         estilo: estilo de aprendizado do aluno.
+        modo: "material" (responde pelo RAG) ou "conhecimento_geral"
+            (responde com conhecimento proprio, com aviso).
 
     Returns:
         str: resposta gerada pela LLM.
     """
     cliente = _cliente_groq()
     mensagens = montar_prompt(
-        pergunta, contexto_rag, nivel, estilo
+        pergunta, contexto_rag, nivel, estilo, modo
     )
 
     resposta = cliente.chat.completions.create(
         model=MODELO_GROQ,
         messages=mensagens,
-        temperature=0.2,  # mais baixo = mais fiel ao material
+        temperature=0.2,
         max_tokens=800,
     )
 

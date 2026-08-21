@@ -3,11 +3,15 @@ Logica de busca semantica do RAG, com expansao de consulta.
 
 Modelo: intfloat/multilingual-e5-small (o MESMO do indexador).
 
-Duas melhorias sobre a busca simples:
+Melhorias:
   1. Expansao por palavras-chave (atende material em topicos/slides).
   2. Dicionario de sinonimos do dominio: termos ambiguos como "para"
-     e "se" (que sao comando E palavra comum) sao traduzidos para os
-     termos tecnicos inequivocos usados na apostila.
+     e "se" sao traduzidos para os termos tecnicos da apostila.
+  3. Verificacao de relevancia por CONTEUDO: apos buscar, confere se
+     os trechos realmente tratam do assunto perguntado (pela palavra-
+     chave da pergunta OU por um sinonimo de dominio). Isso informa ao
+     orquestrador se ha material relevante ou se deve acionar o
+     conhecimento geral do modelo (Opcao 2).
 """
 
 import re
@@ -23,10 +27,9 @@ STOPWORDS = {
     "qual", "quais", "como", "quando", "onde", "porque", "sao",
     "serve", "significa", "funciona", "explique", "defina",
     "me", "diga", "fale", "sobre", "isso", "isto", "seu", "sua",
+    "e", "o", "que", "eh",
 }
 
-# Traducao de termos ambiguos ou coloquiais para os termos tecnicos
-# inequivocos que aparecem na apostila. A chave dispara a expansao.
 SINONIMOS_DOMINIO = {
     "para": "estrutura de repeticao for laco controlado por contagem",
     "comando para": "estrutura de repeticao for laco controlado por contagem",
@@ -43,7 +46,6 @@ SINONIMOS_DOMINIO = {
 def _traduzir_dominio(pergunta_lower):
     """Se a pergunta menciona um termo ambiguo do dominio, devolve
     a expansao tecnica correspondente. Senao, devolve vazio."""
-    # tenta primeiro as chaves compostas (mais especificas)
     for termo in sorted(SINONIMOS_DOMINIO, key=len, reverse=True):
         if re.search(rf"\b{re.escape(termo)}\b", pergunta_lower):
             return SINONIMOS_DOMINIO[termo]
@@ -57,9 +59,54 @@ def extrair_palavras_chave(pergunta):
     return " ".join(chaves) if chaves else pergunta
 
 
+def _tem_conteudo_relevante(pergunta, trechos):
+    """Verifica se os trechos realmente tratam do assunto perguntado.
+
+    Combinada: um trecho e relevante se contem alguma palavra-chave
+    da pergunta OU algum termo da expansao de dominio correspondente.
+    """
+    if not trechos:
+        return False
+
+    pergunta_lower = pergunta.lower()
+
+    # termos a procurar: palavras-chave da pergunta + expansao de dominio
+    termos_busca = set()
+    for palavra in extrair_palavras_chave(pergunta).split():
+        if len(palavra) > 2:
+            termos_busca.add(palavra)
+
+    traducao = _traduzir_dominio(pergunta_lower)
+    if traducao:
+        for palavra in traducao.split():
+            if len(palavra) > 2:
+                termos_busca.add(palavra)
+
+    if not termos_busca:
+        return False
+
+    # relevante se ALGUM trecho contem ALGUM dos termos
+    corpo = " ".join(trechos).lower()
+    for termo in termos_busca:
+        if termo in corpo:
+            return True
+    return False
+
+
 def buscar(pergunta, quantidade=3):
-    """Busca trechos relevantes combinando ate tres consultas:
-    a pergunta original, as palavras-chave, e a expansao do dominio."""
+    """Busca trechos relevantes. Retorna apenas a lista (compat.)."""
+    trechos, _ = buscar_com_relevancia(pergunta, quantidade)
+    return trechos
+
+
+def buscar_com_relevancia(pergunta, quantidade=3):
+    """Busca trechos e informa se ha material realmente relevante.
+
+    Returns:
+        (trechos, tem_relevante):
+            trechos (list[str]): os trechos encontrados.
+            tem_relevante (bool): True se os trechos tratam do assunto.
+    """
     modelo = SentenceTransformer(MODELO_EMBEDDINGS)
     cliente = chromadb.PersistentClient(path=PASTA_VETORES)
     colecao = cliente.get_or_create_collection("conteudo")
@@ -76,7 +123,10 @@ def buscar(pergunta, quantidade=3):
         consultas.append(f"query: {traducao}")
 
     vetores = modelo.encode(consultas).tolist()
-    resultado = colecao.query(query_embeddings=vetores, n_results=quantidade)
+    resultado = colecao.query(
+        query_embeddings=vetores,
+        n_results=quantidade,
+    )
 
     vistos = set()
     combinados = []
@@ -86,7 +136,10 @@ def buscar(pergunta, quantidade=3):
                 vistos.add(doc)
                 combinados.append(doc)
 
-    return combinados[: quantidade * 2]
+    trechos = combinados[: quantidade * 2]
+    tem_relevante = _tem_conteudo_relevante(pergunta, trechos)
+
+    return trechos, tem_relevante
 
 
 def montar_contexto(trechos):
