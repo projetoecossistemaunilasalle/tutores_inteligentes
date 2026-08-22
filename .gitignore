@@ -33,3 +33,5 @@ diag_busca.py
 diag_busca5.py
 diag_rag.py
 reindexar.py
+diag_dist.py
+diag_malloc.py
