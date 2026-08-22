@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Exercícios — Prof.ia{% endblock %}
+{% block page_title %}Exercícios de fixação{% endblock %}
+{% block topbar_extra %}
+  <div class="topbar-divider"></div>
+  <div class="topbar-lesson">Tópico: <strong>{{ topico.titulo|default:"Todos" }}</strong></div>
+{% endblock %}
+
+{% block body %}
+<div class="panel-body">
+
+  {% if topicos %}
+  <div class="suggestions-row" style="border:none;padding:0 0 14px;">
+    <a class="sug-pill {% if not topico %}active{% endif %}" href="{% url 'exercicios_aluno' %}">Todos</a>
+    {% for t in topicos %}
+    <a class="sug-pill {% if topico.id == t.id %}active{% endif %}" href="?topico={{ t.id }}">{{ t.titulo }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for ex in exercicios %}
+  <div class="quiz-q">
+    <div class="quiz-q-num">Exercício {{ forloop.counter }} · nível {{ ex.get_nivel_display }}</div>
+    <div class="quiz-q-text">{{ ex.enunciado }}</div>
+
+    {% if ex.feedback %}
+      <div class="form-note" style="border-color:{% if ex.acertou %}var(--green){% else %}var(--red){% endif %}">
+        {% if ex.acertou %}✅ Resposta correta! <span class="tag ok">+8 XP</span>{% else %}❌ Ainda não foi dessa vez.{% endif %}
+        {% if ex.gabarito %}<br><strong>Gabarito:</strong> {{ ex.gabarito.resposta_correta }}
+          {% if ex.gabarito.explicacao %}<br>{{ ex.gabarito.explicacao }}{% endif %}
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <form method="post" action="?topico={{ topico.id }}" style="margin-top:10px;">
+      {% csrf_token %}
+      <input type="hidden" name="exercicio_id" value="{{ ex.id }}" />
+      <div class="input-wrap" style="background:var(--surface2);">
+        <textarea name="resposta" rows="1" placeholder="Digite sua resposta..." style="background:transparent;">{{ ex.resposta_enviada }}</textarea>
+        <div class="input-actions"><button class="btn btn-primary" type="submit">Enviar</button></div>
+      </div>
+    </form>
+  </div>
+  {% empty %}
+  <div class="empty"><div class="empty-ico">📝</div><p>Nenhum exercício cadastrado para este tópico.</p></div>
+  {% endfor %}
+
+</div>
+{% endblock %}

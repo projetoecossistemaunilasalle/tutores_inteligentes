@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{% block title %}Prof.ia — Portal Institucional{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="{% static 'css/app.css' %}" />
+<style>
+  #loginScreen { position: relative; inset: auto; min-height: 100vh; }
+  html, body { overflow-y: auto; }
+  .login-card.wide { width: 560px; }
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-bg">
+    <div class="login-bg-orb o1"></div>
+    <div class="login-bg-orb o2"></div>
+    <div class="login-bg-orb o3"></div>
+    <div class="login-grid"></div>
+  </div>
+
+  <div class="login-card {% block card_class %}{% endblock %}">
+    <div class="login-logo">
+      <div class="login-logo-icon"></div>
+      <div class="login-logo-text">Prof.<span>ia</span></div>
+    </div>
+    <div class="inst-badge">Portal <b>Institucional</b></div>
+
+    {% if messages %}
+      {% for m in messages %}
+      <div class="form-error show" style="margin-bottom:10px;">{{ m }}</div>
+      {% endfor %}
+    {% endif %}
+
+    {% block card_body %}{% endblock %}
+
+    <div class="login-footer">
+      Ao entrar você concorda com os <a href="#">Termos de Uso</a> e <a href="#">Privacidade</a>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

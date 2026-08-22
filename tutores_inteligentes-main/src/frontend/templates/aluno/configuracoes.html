@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Configurações — Prof.ia{% endblock %}
+{% block page_title %}Configurações{% endblock %}
+{% block body %}
+<div class="panel-body">
+
+  <form method="post" action="{% url 'configuracoes_aluno' %}">
+    {% csrf_token %}
+
+    <div class="settings-section">
+      <div class="settings-section-title">Aparência</div>
+      <div class="theme-options">
+        <label class="theme-option">
+          <input type="radio" name="tema" value="claro" {% if request.user.tema == 'claro' %}checked{% endif %} onchange="this.form.submit()" />
+          <div class="theme-swatch claro"></div>
+          <span>Claro</span>
+        </label>
+        <label class="theme-option">
+          <input type="radio" name="tema" value="escuro" {% if request.user.tema == 'escuro' %}checked{% endif %} onchange="this.form.submit()" />
+          <div class="theme-swatch escuro"></div>
+          <span>Escuro</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Notificações</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Notificações por e-mail</div>
+          <div class="settings-row-desc">Receber avisos de novas conquistas, quizzes e atividades.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" name="notificacoes_email" {% if request.user.notificacoes_email %}checked{% endif %} onchange="this.form.submit()" />
+          <span class="switch-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Perfil</div>
+      <div class="form-card">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Nome de exibição</label>
+            <input class="form-input" name="first_name" type="text" value="{{ request.user.first_name }}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-mail</label>
+            <input class="form-input" name="email" type="email" value="{{ request.user.email }}" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Matrícula</label>
+          <input class="form-input" type="text" value="{{ request.user.identificador_aluno|default:request.user.username }}" disabled />
+          <span class="field-hint">A matrícula não pode ser alterada por aqui.</span>
+        </div>
+        <button class="btn btn-primary" type="submit">Salvar alterações</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="settings-section">
+    <div class="settings-section-title">Segurança</div>
+    <a class="btn" href="{% url 'password_change' %}">Alterar senha</a>
+  </div>
+
+</div>
+{% endblock %}

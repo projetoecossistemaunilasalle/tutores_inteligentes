@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Meu painel — Prof.ia{% endblock %}
+{% block page_title %}Meu painel{% endblock %}
+{% block topbar_extra %}
+  <div class="topbar-divider"></div>
+  <div class="topbar-lesson">Olá, <strong>{{ request.user.first_name|default:request.user.username }}</strong></div>
+  <div class="topbar-actions">
+    <div class="streak-badge">🔥 {{ nivel.streak_dias|default:0 }} dias seguidos</div>
+    <a class="icon-btn" style="width:auto;padding:0 14px;font-size:12px;" href="{% url 'chat_aluno' %}">Abrir tutor</a>
+  </div>
+{% endblock %}
+
+{% block body %}
+<div class="panel-body">
+
+  <div class="perf-hero">
+    <div class="perf-block">
+      <div class="perf-block-title">Nível atual</div>
+      <div class="stat-value">{{ nivel.nivel|default:1 }}</div>
+      <div class="stat-label">{{ nivel.xp_total|default:0 }} XP acumulados</div>
+      <div class="xp-bar" style="margin-top:10px"><div class="xp-fill" style="width:{{ xp_pct|default:0 }}%"></div></div>
+      <div class="stat-foot">Faltam {{ xp_faltante }} XP para o nível {{ proximo_nivel }}</div>
+    </div>
+    <div class="perf-block">
+      <div class="perf-block-title">Resumo</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-value">{{ licoes_concluidas }}</div><div class="stat-label">Lições concluídas</div></div>
+        <div class="stat-card"><div class="stat-value">{{ licoes_andamento }}</div><div class="stat-label">Em andamento</div></div>
+        <div class="stat-card"><div class="stat-value">{{ nivel.streak_dias|default:0 }}</div><div class="stat-label">Sequência (dias)</div></div>
+        <div class="stat-card"><div class="stat-value">{{ conquistas_total }}</div><div class="stat-label">Conquistas</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Progresso nas lições</h3></div>
+    {% for p in progressos %}
+    <div class="list-item">
+      <div class="li-main">
+        <div class="li-title">{{ p.licao.titulo }}</div>
+        <div class="li-sub">{{ p.licao.disciplina.nome }} · etapa {{ p.etapa_atual }} de {{ p.licao.total_etapas }}</div>
+      </div>
+      <div class="li-score">
+        {{ p.pct }}%
+        {% if p.concluida %}<span class="tag ok">Concluída</span>{% else %}<span class="tag">Em curso</span>{% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty"><div class="empty-ico">📚</div><p>Você ainda não iniciou nenhuma lição. Abra o tutor para começar.</p></div>
+    {% endfor %}
+  </div>
+
+  {% if desempenho_resumo %}
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Análise de desempenho</h3></div>
+    <p class="tile-desc">{{ desempenho_resumo }}</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

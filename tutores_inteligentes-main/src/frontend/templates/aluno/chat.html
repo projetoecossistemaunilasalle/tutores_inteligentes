@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Tutor IA — Prof.ia{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="topbar-subject">
+    <div class="dot" style="background:{{ disciplina.cor_primaria|default:'var(--accent)' }}"></div>
+    <h2>{{ disciplina.nome|default:"Tutor IA" }}</h2>
+  </div>
+  <div class="topbar-divider"></div>
+  <div class="topbar-lesson">Aula: <strong>{{ licao.titulo|default:"Conversa livre" }}</strong></div>
+  <div class="topbar-actions">
+    <div class="online-badge"><span class="online-dot"></span> Online</div>
+    <button class="icon-btn" title="Reiniciar" onclick="clearChat()">↺</button>
+    <button class="icon-btn" title="Quiz" onclick="sendSuggestion('Gere um quiz de 3 perguntas sobre o tema atual')">🧩</button>
+    <button class="icon-btn" title="Resumo" onclick="sendSuggestion('Faça um resumo do que discutimos até agora')">📝</button>
+    <button class="icon-btn" title="Configurar API" onclick="openApiKeyModal()">🔑</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="progress-strip">
+  <div class="lesson-steps" id="lessonSteps"></div>
+  <div class="progress-label">Lição {{ licao_ordem|default:1 }} de {{ licao_total|default:1 }}</div>
+  <div class="topbar-divider" style="margin:0 4px"></div>
+  <div class="streak-badge">🔥 {{ nivel.streak_dias|default:0 }} dias seguidos</div>
+</div>
+
+<div class="chat-area" id="chatArea"></div>
+
+<div class="suggestions-row">
+  <button class="sug-pill" onclick="sendSuggestion('Me dê uma dica sobre o tema')">💡 Dica</button>
+  <button class="sug-pill" onclick="sendSuggestion('Explique com um exemplo prático')">📖 Exemplo prático</button>
+  <button class="sug-pill" onclick="sendSuggestion('Quero um exercício para praticar')">🧩 Exercício</button>
+  <button class="sug-pill" onclick="sendSuggestion('Explique de forma mais simples')">🔁 Mais simples</button>
+  <button class="sug-pill" onclick="sendSuggestion('Qual é o próximo tema?')">✅ Próximo tema</button>
+</div>
+
+<div class="input-bar">
+  <div class="input-wrap">
+    <textarea id="userInput" placeholder="Pergunte algo ao professor..." rows="1"
+      onkeydown="handleKey(event)" oninput="autoResize(this);updateCharCount()"></textarea>
+    <div class="input-actions">
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+  <div class="input-footer">
+    <span class="input-hint">Enter para enviar · Shift+Enter nova linha</span>
+    <span class="char-count" id="charCount">0 / 1000</span>
+  </div>
+</div>
+
+<div id="apiKeyModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Configurar IA</h3>
+      <button class="modal-close" onclick="closeApiKeyModal()">✕</button>
+    </div>
+    <p class="modal-sub">Por padrão o tutor usa o motor de IA do próprio sistema (<code>/api/perguntar/</code>).
+       Se preferir, informe um endpoint e uma chave próprios — salvos apenas no seu navegador.</p>
+    <div class="form-group">
+      <label class="form-label">Endpoint (opcional)</label>
+      <input class="form-input" id="apiEndpoint" type="text" placeholder="https://api.groq.com/openai/v1/chat/completions" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Modelo</label>
+      <input class="form-input" id="apiModel" type="text" placeholder="llama-3.1-8b-instant" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Chave da API</label>
+      <input class="form-input" id="apiKeyInput" type="password" placeholder="sk-..." />
+    </div>
+    <div class="form-row" style="justify-content:space-between;margin-top:6px;">
+      <button class="btn" onclick="clearApiKey()">Usar motor do sistema</button>
+      <button class="btn btn-primary" onclick="saveApiKey()">Salvar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  window.CHAT_CONFIG = {
+    apiUrl: "{% url 'chat_perguntar_aluno' %}",
+    disciplinaId: {{ disciplina.id|default:"null" }},
+    csrfToken: "{{ csrf_token }}",
+    systemPrompt: "{{ disciplina.prompt_sistema|default:'Você é o Prof.ia, um tutor didático e paciente. Explique com exemplos claros e proponha exercícios progressivos.'|escapejs }}",
+    disciplina: "{{ disciplina.nome|default:'Conversa livre'|escapejs }}",
+    totalSteps: {{ licao_total|default:1 }},
+    stepAtual: {{ licao_ordem|default:1 }}
+  };
+  window.CHAT_HISTORY = [
+    {% for m in mensagens %}{ role: "{{ m.papel }}", content: "{{ m.conteudo|escapejs }}" }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
+</script>
+<script src="{% static 'js/chat.js' %}"></script>
+{% endblock %}

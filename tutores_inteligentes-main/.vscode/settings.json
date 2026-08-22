@@ -1,0 +1,8 @@
+{
+  "python.analysis.extraPaths": ["src"],
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "pylint.args": [
+    "--disable=missing-class-docstring,too-few-public-methods"
+]
+}

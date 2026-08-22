@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Histórico — Prof.ia{% endblock %}
+{% block page_title %}Histórico de conversas{% endblock %}
+{% block body %}
+<div class="panel-body">
+  {% for h in interacoes %}
+  <div class="list-item" style="flex-direction:column;align-items:stretch;gap:6px;">
+    <div class="li-sub">{{ h.data_hora|date:"d/m/Y H:i" }} · {{ h.topico|default:"Geral" }}
+      {% if h.origem %}· <span class="tag">{{ h.get_origem_display }}</span>{% endif %}</div>
+    <div class="li-title">🧑 {{ h.pergunta }}</div>
+    <div class="tile-desc">🎓 {{ h.resposta }}</div>
+  </div>
+  {% empty %}
+  <div class="empty"><div class="empty-ico">💬</div><p>Você ainda não conversou com o tutor.
+    <br><a class="btn btn-primary" href="{% url 'chat_aluno' %}" style="margin-top:12px;">Abrir o tutor</a></p></div>
+  {% endfor %}
+</div>
+{% endblock %}

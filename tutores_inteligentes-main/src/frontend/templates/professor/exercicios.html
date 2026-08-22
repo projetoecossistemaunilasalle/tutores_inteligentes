@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Exercícios — Prof.ia{% endblock %}
+{% block page_title %}Gestão de exercícios{% endblock %}
+{% block body %}
+<div class="panel-body">
+
+  <div class="form-card">
+    <div class="panel-section-head"><h3>Novo exercício</h3></div>
+    <form method="post" action="{% url 'gestao_exercicios' %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Enunciado</label>
+        <textarea class="form-input" name="enunciado" rows="2" required></textarea>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Tópico</label>
+          <select class="form-input" name="topico">
+            <option value="">— sem tópico —</option>
+            {% for t in topicos %}<option value="{{ t.id }}">{{ t.titulo }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nível</label>
+          <select class="form-input" name="nivel">
+            <option value="iniciante">Iniciante</option>
+            <option value="intermediario">Intermediário</option>
+            <option value="avancado">Avançado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Resposta correta (gabarito)</label>
+        <input class="form-input" name="resposta_correta" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Explicação (opcional)</label>
+        <textarea class="form-input" name="explicacao" rows="2"></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Salvar exercício</button>
+    </form>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Exercícios cadastrados ({{ exercicios|length }})</h3></div>
+    {% for ex in exercicios %}
+    <div class="list-item">
+      <div class="li-main">
+        <div class="li-title">{{ ex.enunciado }}</div>
+        <div class="li-sub">{% if ex.topico %}{{ ex.topico.titulo }} · {% endif %}nível {{ ex.get_nivel_display }}
+          {% if ex.gabarito %}· gabarito: {{ ex.gabarito.resposta_correta }}{% endif %}</div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty"><div class="empty-ico">📝</div><p>Nenhum exercício cadastrado.</p></div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

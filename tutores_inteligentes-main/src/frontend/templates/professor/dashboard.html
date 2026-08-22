@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Turma — Prof.ia{% endblock %}
+{% block page_title %}Desempenho da turma{% endblock %}
+{% block topbar_extra %}
+  <div class="topbar-divider"></div>
+  <div class="topbar-lesson">Turma: <strong>{{ turma_nome }}</strong></div>
+  <div class="topbar-actions"><div class="online-badge"><span class="online-dot"></span> Dados atualizados hoje</div></div>
+{% endblock %}
+
+{% block body %}
+<div class="panel-body">
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-value">{{ total_alunos }}</div><div class="stat-label">Alunos</div></div>
+    <div class="stat-card"><div class="stat-value">{{ total_interacoes }}</div><div class="stat-label">Interações com o tutor</div></div>
+    <div class="stat-card"><div class="stat-value">{{ total_exercicios }}</div><div class="stat-label">Exercícios ativos</div></div>
+    <div class="stat-card"><div class="stat-value">{{ total_videoaulas }}</div><div class="stat-label">Videoaulas</div></div>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Alunos</h3></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Aluno</th><th>Nível</th><th>Estado emocional</th><th>Interações</th><th></th></tr></thead>
+        <tbody>
+        {% for a in alunos %}
+          <tr>
+            <td class="name-cell">{{ a.nome }}</td>
+            <td><span class="tag">{{ a.get_nivel_proficiencia_display }}</span></td>
+            <td>{{ a.estado_emocional|default:"—" }}</td>
+            <td>{{ a.num_interacoes }}</td>
+            <td><a class="btn" href="{% url 'detalhe_aluno' a.id %}">Ver detalhes</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5"><div class="empty"><div class="empty-ico">👥</div><p>Nenhum perfil de aluno no banco (Grupo 1).</p></div></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

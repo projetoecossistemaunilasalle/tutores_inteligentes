@@ -1,0 +1,106 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="{{ request.user.tema|default:'claro' }}">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{% block title %}Prof.ia — Plataforma de Aprendizado{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="{% static 'css/app.css' %}" />
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% if messages %}
+<div class="flash-stack">
+  {% for m in messages %}
+  <div class="flash {{ m.tags }}">{{ m }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="app visible" id="appShell">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🎓</div>
+      <div class="logo-text">Prof.<span>ia</span></div>
+    </div>
+
+    {% if request.user.eh_professor %}
+    <div class="sidebar-section">
+      <div class="sidebar-label">Acompanhamento</div>
+      <a class="nav-item {% if active_nav == 'dashboard' %}active{% endif %}" href="{% url 'dashboard_professor' %}">Desempenho da turma</a>
+      <a class="nav-item {% if active_nav == 'disciplinas' %}active{% endif %}" href="{% url 'gestao_disciplinas' %}">Disciplinas e lições</a>
+      <a class="nav-item {% if active_nav == 'conteudo' %}active{% endif %}" href="{% url 'gestao_conteudo' %}">Base de conhecimento</a>
+      <a class="nav-item {% if active_nav == 'exercicios' %}active{% endif %}" href="{% url 'gestao_exercicios' %}">Exercícios</a>
+      <a class="nav-item {% if active_nav == 'qa' %}active{% endif %}" href="{% url 'gestao_qa' %}">Repositório de Q&amp;A</a>
+      <a class="nav-item {% if active_nav == 'videoaulas' %}active{% endif %}" href="{% url 'gestao_videoaulas' %}">Videoaulas</a>
+      <a class="nav-item {% if active_nav == 'configuracoes' %}active{% endif %}" href="{% url 'configuracoes_professor' %}">Configurações</a>
+    </div>
+    {% else %}
+    <div class="sidebar-section">
+      <div class="sidebar-label">Menu</div>
+      <a class="nav-item {% if active_nav == 'dashboard' %}active{% endif %}" href="{% url 'dashboard_aluno' %}">Meu painel</a>
+      <a class="nav-item {% if active_nav == 'chat' %}active{% endif %}" href="{% url 'chat_aluno' %}">Tutor IA</a>
+      <a class="nav-item {% if active_nav == 'exercicios' %}active{% endif %}" href="{% url 'exercicios_aluno' %}">Exercícios</a>
+      <a class="nav-item {% if active_nav == 'quiz' %}active{% endif %}" href="{% url 'quiz_aluno' %}">Quiz</a>
+      <a class="nav-item {% if active_nav == 'videoaulas' %}active{% endif %}" href="{% url 'videoaulas_aluno' %}">Videoaulas</a>
+      <a class="nav-item {% if active_nav == 'historico' %}active{% endif %}" href="{% url 'historico_aluno' %}">Histórico</a>
+      <a class="nav-item {% if active_nav == 'conquistas' %}active{% endif %}" href="{% url 'conquistas_aluno' %}">Conquistas</a>
+      <a class="nav-item {% if active_nav == 'configuracoes' %}active{% endif %}" href="{% url 'configuracoes_aluno' %}">Configurações</a>
+    </div>
+    {% endif %}
+
+    <div class="sidebar-section" style="padding-bottom:8px;">
+      <div class="sidebar-label">{% if request.user.eh_professor %}Matérias da turma{% else %}Matérias{% endif %}</div>
+    </div>
+    <div class="subjects-list">
+      {% for d in disciplinas %}
+      <a class="subject-item {% if d.id == disciplina_ativa_id %}active{% endif %}"
+         href="{% if request.user.eh_professor %}{% url 'gestao_disciplinas' %}{% else %}{% url 'chat_aluno' %}?disciplina={{ d.id }}{% endif %}">
+        <span class="subject-dot" style="background:{{ d.cor_primaria }}"></span>
+        {{ d.nome }}
+        {% if d.progresso is not None %}<span class="subject-prog">{{ d.progresso }}%</span>{% endif %}
+      </a>
+      {% empty %}
+      <div class="field-hint" style="padding:0 4px;">Nenhuma matéria cadastrada.</div>
+      {% endfor %}
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar-wrap">
+          <div class="user-avatar" style="background:{{ avatar_cor|default:'linear-gradient(135deg,#4ade80,#22d3ee)' }}">{{ avatar_iniciais }}</div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div class="user-name">{{ request.user.first_name|default:request.user.username }}</div>
+          {% if request.user.eh_professor %}
+          <div class="user-level">Docente · {{ turma_nome|default:"Turma" }}</div>
+          {% else %}
+          <div class="user-level" id="sidebarNivelTxt">Nível {{ nivel.nivel|default:1 }} · {{ nivel.xp_total|default:0 }} XP</div>
+          <div class="xp-bar"><div class="xp-fill" id="sidebarXpFill" style="width:{{ xp_pct|default:0 }}%"></div></div>
+          {% endif %}
+        </div>
+        <a class="logout-btn" href="{% url 'sair' %}" title="Sair">✕</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% block topbar %}
+    <div class="topbar">
+      <div class="topbar-subject">
+        <div class="dot" style="background:var(--accent)"></div>
+        <h2>{% block page_title %}Plataforma{% endblock %}</h2>
+      </div>
+      {% block topbar_extra %}{% endblock %}
+    </div>
+    {% endblock %}
+
+    {% block body %}{% endblock %}
+  </main>
+</div>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>
