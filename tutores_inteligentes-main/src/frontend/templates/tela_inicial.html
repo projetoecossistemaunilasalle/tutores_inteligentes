@@ -1,0 +1,25 @@
+{% extends "base_auth.html" %}
+{% block title %}Prof.ia — Acesso{% endblock %}
+{% block card_class %}wide{% endblock %}
+{% block card_body %}
+  <h1 class="login-heading">Bem-vindo ao STI</h1>
+  <p class="login-sub">Sistema de Tutores Inteligentes. Escolha como deseja entrar.</p>
+
+  <div class="portal">
+    <a class="portal-card" href="{% url 'login_aluno' %}">
+      <div class="portal-ico">🎓</div>
+      <div class="portal-title">Aluno</div>
+      <div class="portal-sub">Acesse o tutor, exercícios e seu progresso.</div>
+    </a>
+    <a class="portal-card" href="{% url 'login_professor' %}">
+      <div class="portal-ico">🧑‍🏫</div>
+      <div class="portal-title">Professor</div>
+      <div class="portal-sub">Acompanhe a turma e gerencie conteúdos.</div>
+    </a>
+    <a class="portal-card" href="/admin/">
+      <div class="portal-ico">⚙️</div>
+      <div class="portal-title">Administração</div>
+      <div class="portal-sub">Painel administrativo do Django.</div>
+    </a>
+  </div>
+{% endblock %}

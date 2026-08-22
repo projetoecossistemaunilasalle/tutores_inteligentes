@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Quiz — Prof.ia{% endblock %}
+{% block page_title %}Quiz{% endblock %}
+{% block topbar_extra %}
+  <div class="topbar-divider"></div>
+  <div class="topbar-lesson">{{ quiz.titulo|default:"Selecione um quiz" }}</div>
+{% endblock %}
+
+{% block body %}
+<div class="panel-body">
+
+  {% if resultado %}
+  <div class="perf-hero" style="margin-bottom:18px;">
+    <div class="perf-block">
+      <div class="perf-block-title">Resultado</div>
+      <div class="stat-value">{{ resultado.acertos }}/{{ resultado.total }}</div>
+      <div class="stat-label">{{ resultado.pontuacao }}% de acerto · +{{ resultado.xp_ganho }} XP</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not quiz %}
+    <div class="cards-grid">
+      {% for q in quizzes %}
+      <a class="tile" href="?quiz={{ q.id }}">
+        <div class="tile-title">{{ q.titulo }}</div>
+        <div class="tile-desc">{{ q.descricao|default:"Quiz de fixação." }}</div>
+        <div class="tile-foot"><span class="tag">{{ q.total_questoes }} questões</span>
+          {% if q.gerado_por_ia %}<span class="tag ok">IA</span>{% endif %}</div>
+      </a>
+      {% empty %}
+      <div class="empty"><div class="empty-ico">🧩</div><p>Nenhum quiz disponível ainda.</p></div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <form method="post" action="?quiz={{ quiz.id }}">
+      {% csrf_token %}
+      {% for questao in questoes %}
+      <div class="quiz-q">
+        <div class="quiz-q-num">Questão {{ forloop.counter }}</div>
+        <div class="quiz-q-text">{{ questao.enunciado }}</div>
+        {% for alt in questao.alternativas.all %}
+        <label class="quiz-alt">
+          <input type="radio" name="q_{{ questao.id }}" value="{{ alt.id }}" required />
+          <span>{{ alt.texto }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <button class="btn btn-primary" type="submit">Enviar respostas</button>
+      <a class="btn" href="{% url 'quiz_aluno' %}">Voltar</a>
+    </form>
+  {% endif %}
+
+</div>
+{% endblock %}

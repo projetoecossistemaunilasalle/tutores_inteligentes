@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Videoaulas — Prof.ia{% endblock %}
+{% block page_title %}Gestão de videoaulas{% endblock %}
+{% block body %}
+<div class="panel-body">
+
+  <div class="form-card">
+    <div class="panel-section-head"><h3>Nova videoaula</h3></div>
+    <form method="post" action="{% url 'gestao_videoaulas' %}">
+      {% csrf_token %}
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Título</label>
+          <input class="form-input" name="titulo" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Link do YouTube</label>
+          <input class="form-input" name="url_youtube" placeholder="https://www.youtube.com/watch?v=..." required />
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Disciplina</label>
+          <select class="form-input" name="disciplina">
+            <option value="">— sem disciplina —</option>
+            {% for d in disciplinas %}<option value="{{ d.id }}">{{ d.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Duração (min)</label>
+          <input class="form-input" name="duracao_minutos" type="number" min="0" value="0" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea class="form-input" name="descricao" rows="2"></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Cadastrar videoaula</button>
+    </form>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Videoaulas cadastradas ({{ videoaulas|length }})</h3></div>
+    <div class="video-grid">
+      {% for v in videoaulas %}
+      <div class="tile" style="padding:0;overflow:hidden;">
+        <div class="video-frame"><iframe src="{{ v.embed_url }}" title="{{ v.titulo }}" allowfullscreen loading="lazy"></iframe></div>
+        <div style="padding:12px;">
+          <div class="tile-title" style="font-size:14px;">{{ v.titulo }}</div>
+          <div class="tile-foot"><span class="tag">{{ v.disciplina.nome|default:"Geral" }}</span>
+            {% if not v.ativa %}<span class="tag risk">Inativa</span>{% endif %}</div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="empty"><div class="empty-ico">🎬</div><p>Nenhuma videoaula cadastrada.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

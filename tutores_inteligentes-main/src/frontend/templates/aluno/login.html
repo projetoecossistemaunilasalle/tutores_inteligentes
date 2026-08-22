@@ -1,0 +1,29 @@
+{% extends "base_auth.html" %}
+{% block title %}Login do Aluno — Prof.ia{% endblock %}
+{% block card_body %}
+  <h1 class="login-heading">Acesso do aluno</h1>
+  <p class="login-sub">Informe sua matrícula (ou usuário) e senha para continuar.</p>
+
+  <form method="post" action="{% url 'login_aluno' %}" class="login-form">
+    {% csrf_token %}
+    <div class="form-group">
+      <label class="form-label">Matrícula ou usuário</label>
+      <input class="form-input" name="username" type="text" placeholder="2024001234" autofocus required />
+      <span class="field-hint">Use a matrícula fornecida pela instituição.</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <input class="form-input" name="password" type="password" placeholder="••••••••" required />
+    </div>
+    <button class="login-btn" type="submit">Entrar</button>
+  </form>
+
+  <div class="login-divider"></div>
+  <div class="demo-hint">
+    Ainda não tem conta? <a href="{% url 'cadastro_aluno' %}">Criar conta de aluno</a><br>
+    Conta de demonstração: <b>2024001234</b> / <b>123456</b>
+  </div>
+  <div class="login-footer" style="border:none;padding-top:6px;">
+    <a href="{% url 'login_professor' %}">Sou professor</a> · <a href="{% url 'tela_inicial' %}">Voltar ao início</a>
+  </div>
+{% endblock %}

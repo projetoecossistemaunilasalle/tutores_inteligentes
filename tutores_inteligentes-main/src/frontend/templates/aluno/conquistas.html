@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Conquistas — Prof.ia{% endblock %}
+{% block page_title %}Conquistas e notificações{% endblock %}
+{% block body %}
+<div class="panel-body">
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Notificações</h3></div>
+    {% for n in notificacoes %}
+    <div class="notif {% if not n.lida %}unread{% endif %}">
+      <div class="notif-ico">🔔</div>
+      <div style="flex:1;">
+        <div class="li-title" style="font-size:14px;">{{ n.titulo }}</div>
+        <div class="tile-desc">{{ n.corpo }}</div>
+      </div>
+      {% if not n.lida %}
+      <form method="post" action="{% url 'conquistas_aluno' %}">
+        {% csrf_token %}
+        <input type="hidden" name="notificacao_id" value="{{ n.id }}" />
+        <button class="btn" type="submit">Marcar como lida</button>
+      </form>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="field-hint">Nenhuma notificação no momento.</div>
+    {% endfor %}
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Minhas conquistas</h3></div>
+    <div class="badge-grid">
+      {% for c in conquistas %}
+      <div class="badge {% if not c.desbloqueada %}locked{% endif %}">
+        <div class="badge-ico">{{ c.icone|default:"🏆" }}</div>
+        <div class="badge-name">{{ c.nome }}</div>
+        <div class="badge-desc">{{ c.descricao }}</div>
+        {% if c.desbloqueada %}<div class="tag ok" style="margin-top:8px;display:inline-block;">Conquistada</div>
+        {% else %}<div class="tag" style="margin-top:8px;display:inline-block;">+{{ c.xp_bonus }} XP</div>{% endif %}
+      </div>
+      {% empty %}
+      <div class="empty"><div class="empty-ico">🏆</div><p>Nenhuma conquista cadastrada.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

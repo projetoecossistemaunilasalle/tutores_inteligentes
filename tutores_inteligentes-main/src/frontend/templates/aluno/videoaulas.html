@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Videoaulas — Prof.ia{% endblock %}
+{% block page_title %}Videoaulas{% endblock %}
+{% block body %}
+<div class="panel-body">
+  <div class="video-grid">
+    {% for v in videoaulas %}
+    <div class="tile" style="padding:0;overflow:hidden;">
+      <div class="video-frame">
+        <iframe src="{{ v.embed_url }}" title="{{ v.titulo }}" allowfullscreen loading="lazy"></iframe>
+      </div>
+      <div style="padding:14px;">
+        <div class="tile-title" style="font-size:15px;">{{ v.titulo }}</div>
+        <div class="tile-desc">{{ v.descricao|default:"" }}</div>
+        <div class="tile-foot">
+          <span class="tag">{{ v.disciplina.nome|default:"Geral" }}</span>
+          {% if v.duracao_minutos %}<span class="li-sub">{{ v.duracao_minutos }} min</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty"><div class="empty-ico">🎬</div><p>Nenhuma videoaula cadastrada.</p></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

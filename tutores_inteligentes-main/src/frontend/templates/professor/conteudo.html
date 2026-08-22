@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Base de conhecimento — Prof.ia{% endblock %}
+{% block page_title %}Base de conhecimento{% endblock %}
+{% block body %}
+<div class="panel-body">
+
+  <div class="form-card">
+    <div class="panel-section-head"><h3>Novo tópico</h3></div>
+    <form method="post" action="{% url 'gestao_conteudo' %}">
+      {% csrf_token %}
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Título</label>
+          <input class="form-input" name="titulo" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nível</label>
+          <select class="form-input" name="nivel">
+            <option value="iniciante">Iniciante</option>
+            <option value="intermediario">Intermediário</option>
+            <option value="avancado">Avançado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição breve</label>
+        <input class="form-input" name="descricao" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Conteúdo / material explicativo</label>
+        <textarea class="form-input" name="conteudo" rows="3"></textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Salvar tópico</button>
+    </form>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Tópicos por nível</h3></div>
+    {% for nivel, lista in por_nivel.items %}
+    <div class="perf-block-title" style="margin:14px 0 8px;">{{ nivel }}</div>
+    <div class="cards-grid">
+      {% for c in lista %}
+      <div class="tile">
+        <div class="tile-title">{{ c.titulo }}</div>
+        <div class="tile-desc">{{ c.descricao|default:c.conteudo|truncatewords:20 }}</div>
+        <div class="tile-foot"><span class="tag">ordem {{ c.ordem }}</span>{% if not c.ativo %}<span class="tag risk">Inativo</span>{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% empty %}
+    <div class="empty"><div class="empty-ico">📚</div><p>Nenhum tópico cadastrado.</p></div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}
