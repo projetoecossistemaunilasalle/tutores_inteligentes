@@ -1,0 +1,15 @@
+[project]
+name = "sti"
+version = "0.1.0"
+description = "STI - Sistema de Tutores Inteligentes (Grupo 1)"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.pylint.main]
+source-roots = ["src"]

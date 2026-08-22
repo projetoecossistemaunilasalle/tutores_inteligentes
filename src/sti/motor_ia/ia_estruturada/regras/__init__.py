@@ -1,0 +1,1 @@
+"""Regras pedagogicas (IA Estruturada)."""
