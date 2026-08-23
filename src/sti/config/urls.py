@@ -5,7 +5,7 @@ Inclui todos os endpoints para o Grupo 2 consumir.
 
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import path
+from django.urls import path, include
 
 from sti.banco_dados.chat_view import chat, perguntar
 from sti.banco_dados.views_desempenho import desempenho
@@ -49,8 +49,10 @@ def home(request):
 
 
 urlpatterns = [
-    # Raiz e admin
-    path("", home),
+    # Raiz administrativa e admin
+    # A rota raiz da interface de usuario fica no app `frontend`.
+    # Mantemos uma rota administrativa para o serviço STI em `/sti/`.
+    path("sti/", home),
     path("admin/", admin.site.urls),
 
     # Interface de teste
@@ -93,4 +95,8 @@ urlpatterns = [
         aluno_detalhes,
         name="aluno_detalhes",
     ),
+
+    # Telas do Grupo 2 (Frontend) — servidas pelo mesmo servidor
+    path("", include("frontend.app.urls")),
+
 ]

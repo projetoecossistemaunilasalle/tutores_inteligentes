@@ -57,6 +57,32 @@ class Usuario(AbstractUser):
         ),
     )
 
+    class Tema(models.TextChoices):
+        CLARO = "claro", "Claro"
+        ESCURO = "escuro", "Escuro"
+
+    tema = models.CharField(
+        max_length=10,
+        choices=Tema.choices,
+        default=Tema.CLARO,
+        verbose_name="Tema do site",
+        help_text="Aparência escolhida pelo usuário (claro ou escuro).",
+    )
+
+    notificacoes_email = models.BooleanField(
+        default=True,
+        verbose_name="Notificações por e-mail",
+        help_text="Receber avisos de novas conquistas, quizzes e atividades por e-mail.",
+    )
+
+    turma_nome = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Turma (professor)",
+        help_text="Nome da turma exibido no painel do professor.",
+    )
+
     class Meta:
         db_table = "usuario"
         verbose_name = "Usuário"
