@@ -172,3 +172,122 @@ def indexar_pdfs(pasta=PASTA_PDFS):
 
     print(f"\nTotal indexado: {total} pedacos")
     return total
+
+
+def reindexar_material(pasta=PASTA_PDFS):
+    """Reindexa o material de forma SEGURA, para ser chamada pela interface.
+
+    Diferente de indexar_pdfs(), esta funcao protege a colecao atual:
+    indexa primeiro numa colecao temporaria e so substitui a colecao
+    'conteudo' se a indexacao terminar com sucesso e gerar conteudo.
+    Assim, se um PDF estiver corrompido ou vazio, o RAG atual continua
+    funcionando em vez de ficar quebrado.
+
+    Returns:
+        dict com:
+            ok (bool): True se reindexou com sucesso.
+            total (int): quantidade de pedacos indexados.
+            arquivos (int): quantos PDFs foram processados.
+            mensagem (str): texto para mostrar ao professor/admin.
+    """
+    try:
+        arquivos = [
+            f for f in os.listdir(pasta)
+            if f.lower().endswith(".pdf")
+        ]
+    except FileNotFoundError:
+        return {
+            "ok": False, "total": 0, "arquivos": 0,
+            "mensagem": "Pasta de materiais nao encontrada.",
+        }
+
+    if not arquivos:
+        return {
+            "ok": False, "total": 0, "arquivos": 0,
+            "mensagem": "Nenhum PDF encontrado na pasta de materiais.",
+        }
+
+    try:
+        modelo = SentenceTransformer(MODELO_EMBEDDINGS)
+        os.makedirs(PASTA_VETORES, exist_ok=True)
+        cliente = chromadb.PersistentClient(path=PASTA_VETORES)
+
+        # 1) Indexa numa colecao TEMPORARIA (nao mexe na atual ainda)
+        nome_temp = "conteudo_temp"
+        try:
+            cliente.delete_collection(nome_temp)
+        except Exception:
+            pass
+        colecao_temp = cliente.create_collection(
+            nome_temp,
+            metadata={"hnsw:space": "cosine"},
+        )
+
+        total = 0
+        arquivos_ok = 0
+        for arquivo in arquivos:
+            caminho = os.path.join(pasta, arquivo)
+            texto_completo = ""
+            try:
+                with pdfplumber.open(caminho) as pdf:
+                    for pagina in pdf.pages:
+                        texto_pagina = pagina.extract_text() or ""
+                        texto_limpo = limpar_texto(texto_pagina)
+                        if texto_limpo:
+                            texto_completo += " " + texto_limpo
+            except Exception:
+                # PDF corrompido ou ilegivel: pula, mas registra
+                continue
+
+            if not texto_completo.strip():
+                continue
+
+            pedacos = dividir_em_pedacos(texto_completo)
+            if not pedacos:
+                continue
+
+            pedacos_prefixados = [f"passage: {p}" for p in pedacos]
+            vetores = modelo.encode(pedacos_prefixados).tolist()
+            ids = [f"{arquivo}-{i}" for i in range(len(pedacos))]
+            colecao_temp.add(
+                documents=pedacos, embeddings=vetores, ids=ids,
+            )
+            total += len(pedacos)
+            arquivos_ok += 1
+
+        # 2) Se a indexacao nao gerou nada, ABORTA sem tocar na atual
+        if total == 0:
+            try:
+                cliente.delete_collection(nome_temp)
+            except Exception:
+                pass
+            return {
+                "ok": False, "total": 0, "arquivos": len(arquivos),
+                "mensagem": (
+                    "Nenhum conteudo pode ser extraido dos PDFs. "
+                    "Material nao indexado (possivel arquivo corrompido "
+                    "ou sem texto). O material anterior foi mantido."
+                ),
+            }
+
+        # 3) Sucesso: substitui a colecao 'conteudo' pela nova
+        try:
+            cliente.delete_collection("conteudo")
+        except Exception:
+            pass
+        # renomeia a temporaria para o nome oficial
+        colecao_temp.modify(name="conteudo")
+
+        return {
+            "ok": True, "total": total, "arquivos": arquivos_ok,
+            "mensagem": (
+                f"Reindexacao concluida: {arquivos_ok} arquivo(s), "
+                f"{total} trechos indexados."
+            ),
+        }
+
+    except Exception as e:
+        return {
+            "ok": False, "total": 0, "arquivos": 0,
+            "mensagem": f"Falha na reindexacao: {e}",
+        }
