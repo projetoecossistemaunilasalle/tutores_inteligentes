@@ -44,17 +44,11 @@ def montar_prompt(pergunta, contexto_rag, nivel, estilo, modo="material"):
         # O RAG nao encontrou material relevante. O tutor responde
         # com conhecimento geral, avisando a origem ao aluno.
         instrucao = (
-            f"Voce e um tutor de Algoritmos e Programacao. "
-            f"O aluno esta no nivel {nivel} e aprende melhor "
-            f"de forma {estilo}. "
-            f"O material da disciplina nao cobre este assunto "
-            f"especifico. Responda a pergunta do aluno com seu "
-            f"conhecimento geral de Algoritmos e Programacao, de "
-            f"forma clara e didatica, adequada ao nivel do aluno. "
-            f"IMPORTANTE: comece a resposta avisando o aluno de "
-            f"que esta informacao NAO foi encontrada no material "
-            f"da disciplina e que se trata de uma explicacao geral. "
-            f"Sugira que ele confirme o conteudo com o professor."
+            f"Voce e um tutor de Algoritmos e Programacao para um aluno "
+            f"nivel {nivel}. Este assunto nao esta no material da disciplina. "
+            f"Comece a resposta com: 'Aviso: esta explicacao nao vem do "
+            f"material da disciplina; confirme com o professor.' "
+            f"Depois, explique de forma clara e direta."
         )
 
     return [
@@ -87,7 +81,8 @@ def gerar_resposta(pergunta, contexto_rag, nivel, estilo, modo="material"):
         model=MODELO_GROQ,
         messages=mensagens,
         temperature=0.2,
-        max_tokens=800,
+        max_tokens=1200,
+        reasoning_effort="low",
     )
 
     return resposta.choices[0].message.content.strip()
