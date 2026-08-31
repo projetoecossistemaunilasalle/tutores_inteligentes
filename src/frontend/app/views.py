@@ -200,7 +200,8 @@ def avancar_progresso_licao(usuario, licao, nivel):
     um bônus de XP. Retorna o ProgressoLicao atualizado (ou None)."""
     if not licao:
         return None
-    progresso, _ = ProgressoLicao.objects.get_or_create(usuario=usuario, licao=licao)
+    progresso, _ = ProgressoLicao.objects.get_or_create(
+        usuario=usuario, licao=licao)
     if progresso.concluida:
         return progresso
     progresso.etapa_atual = min(progresso.etapa_atual + 1, licao.total_etapas)
@@ -392,7 +393,8 @@ def chat_perguntar_aluno(request):
         return JsonResponse({"erro": "Digite uma pergunta."}, status=400)
 
     disciplina_id = dados.get("disciplina_id")
-    disciplina = Disciplina.objects.filter(id=disciplina_id).first() if disciplina_id else None
+    disciplina = Disciplina.objects.filter(
+        id=disciplina_id).first() if disciplina_id else None
 
     # Garante que o aluno existe no Grupo 1 antes de perguntar.
     _garantir_perfil_grupo1(request.user)
@@ -421,7 +423,8 @@ def chat_perguntar_aluno(request):
             status=502,
         )
 
-    resposta_txt = resultado.get("resposta") or "Não consegui gerar uma resposta agora."
+    resposta_txt = resultado.get(
+        "resposta") or "Não consegui gerar uma resposta agora."
 
     # --- Persiste a conversa (Grupo 2), para exibir no histórico do chat ---
     conversa = (
@@ -436,8 +439,10 @@ def chat_perguntar_aluno(request):
             usuario=request.user, disciplina=disciplina,
             titulo=disciplina.nome if disciplina else "Conversa com o tutor",
         )
-    Mensagem.objects.create(conversa=conversa, papel="aluno", conteudo=pergunta)
-    Mensagem.objects.create(conversa=conversa, papel="tutor", conteudo=resposta_txt)
+    Mensagem.objects.create(
+        conversa=conversa, papel="aluno", conteudo=pergunta)
+    Mensagem.objects.create(
+        conversa=conversa, papel="tutor", conteudo=resposta_txt)
     conversa.total_mensagens = conversa.mensagens.count()
     conversa.save(update_fields=["total_mensagens"])
 
@@ -526,7 +531,8 @@ def historico_aluno(request):
     ctx = base_ctx(request, "historico")
     interacoes = []
     if STI_OK:
-        perfil = PerfilAluno.objects.filter(identificador=_aluno_id(request.user)).first()
+        perfil = PerfilAluno.objects.filter(
+            identificador=_aluno_id(request.user)).first()
         if perfil:
             interacoes = list(perfil.interacoes.all()[:50])
     ctx["interacoes"] = interacoes
@@ -548,7 +554,8 @@ def quiz_aluno(request):
         )
         for q in questoes:
             alt_id = request.POST.get(f"q_{q.id}")
-            alt = Alternativa.objects.filter(id=alt_id, questao=q).first() if alt_id else None
+            alt = Alternativa.objects.filter(
+                id=alt_id, questao=q).first() if alt_id else None
             correta = bool(alt and alt.correta)
             acertos += 1 if correta else 0
             RespostaQuiz.objects.create(
@@ -578,9 +585,11 @@ def quiz_aluno(request):
         return render(request, "aluno/quiz.html", ctx)
 
     if quiz:
-        ctx.update({"quiz": quiz, "questoes": list(quiz.questoes.prefetch_related("alternativas"))})
+        ctx.update({"quiz": quiz, "questoes": list(
+            quiz.questoes.prefetch_related("alternativas"))})
     else:
-        ctx.update({"quiz": None, "quizzes": list(Quiz.objects.filter(ativo=True))})
+        ctx.update({"quiz": None, "quizzes": list(
+            Quiz.objects.filter(ativo=True))})
     return render(request, "aluno/quiz.html", ctx)
 
 
@@ -691,7 +700,8 @@ def detalhe_aluno(request, aluno_id):
         messages.error(request, "Modulo do aluno (Grupo 1) indisponivel.")
         return redirect("dashboard_professor")
     perfil = get_object_or_404(PerfilAluno, id=aluno_id)
-    ctx.update({"perfil": perfil, "interacoes": list(perfil.interacoes.all()[:30])})
+    ctx.update({"perfil": perfil, "interacoes": list(
+        perfil.interacoes.all()[:30])})
     return render(request, "professor/aluno_detalhe.html", ctx)
 
 
@@ -708,7 +718,8 @@ def gestao_qa(request):
         RepositorioQA.objects.create(
             pergunta=request.POST.get("pergunta", "").strip(),
             resposta=request.POST.get("resposta", "").strip(),
-            topico=ConteudoAlgoritmos.objects.filter(id=tid).first() if tid else None,
+            topico=ConteudoAlgoritmos.objects.filter(
+                id=tid).first() if tid else None,
             palavras_chave=request.POST.get("palavras_chave", "").strip(),
         )
         messages.success(request, "Q&A cadastrado.")
@@ -733,7 +744,8 @@ def gestao_exercicios(request):
         tid = request.POST.get("topico")
         ex = Exercicio.objects.create(
             enunciado=request.POST.get("enunciado", "").strip(),
-            topico=ConteudoAlgoritmos.objects.filter(id=tid).first() if tid else None,
+            topico=ConteudoAlgoritmos.objects.filter(
+                id=tid).first() if tid else None,
             nivel=request.POST.get("nivel", "iniciante"),
         )
         Gabarito.objects.create(
@@ -762,7 +774,8 @@ def gestao_videoaulas(request):
             url_youtube=request.POST.get("url_youtube", "").strip(),
             descricao=request.POST.get("descricao", "").strip(),
             duracao_minutos=int(dur),
-            disciplina=Disciplina.objects.filter(id=did).first() if did else None,
+            disciplina=Disciplina.objects.filter(
+                id=did).first() if did else None,
             cadastrado_por=request.user,
         )
         messages.success(request, "Videoaula cadastrada.")
@@ -795,11 +808,71 @@ def gestao_conteudo(request):
         return redirect("gestao_conteudo")
 
     por_nivel = {}
-    rotulos = {"iniciante": "Iniciante", "intermediario": "Intermediario", "avancado": "Avancado"}
+    rotulos = {"iniciante": "Iniciante",
+               "intermediario": "Intermediario", "avancado": "Avancado"}
     for c in ConteudoAlgoritmos.objects.filter(ativo=True):
         por_nivel.setdefault(rotulos.get(c.nivel, c.nivel), []).append(c)
     ctx["por_nivel"] = por_nivel
     return render(request, "professor/conteudo.html", ctx)
+
+
+@professor_required
+@require_POST
+def upload_material_rag(request):
+    """Recebe um PDF, salva em data/raw/ e reindexa o RAG.
+
+    Serve a mesma tela de gestao de conteudo (professor/conteudo),
+    tratando a parte de material do tutor (PDFs que alimentam o RAG).
+    URL: /professor/conteudo/upload-material/
+    """
+    import os
+
+    arquivo = request.FILES.get("material_pdf")
+
+    # 1) Validacoes basicas antes de salvar
+    if not arquivo:
+        messages.error(request, "Nenhum arquivo foi enviado.")
+        return redirect("gestao_conteudo")
+
+    if not arquivo.name.lower().endswith(".pdf"):
+        messages.error(
+            request,
+            "O arquivo precisa ser um PDF. Envie um arquivo .pdf.",
+        )
+        return redirect("gestao_conteudo")
+
+    # 2) Salva o PDF na pasta data/raw/ (onde o RAG le)
+    # Caminho a partir da raiz do projeto.
+    pasta_raw = os.path.join("data", "raw")
+    os.makedirs(pasta_raw, exist_ok=True)
+    caminho = os.path.join(pasta_raw, arquivo.name)
+
+    try:
+        with open(caminho, "wb") as destino:
+            for parte in arquivo.chunks():
+                destino.write(parte)
+    except Exception as e:
+        messages.error(request, f"Falha ao salvar o arquivo: {e}")
+        return redirect("gestao_conteudo")
+
+    # 3) Reindexa o RAG com protecao (funcao do Passo 1)
+    try:
+        from sti.modulo_dominio.rag.indexador_pdf import reindexar_material
+        resultado = reindexar_material()
+    except Exception as e:
+        messages.error(
+            request,
+            f"Arquivo salvo, mas houve falha ao reindexar: {e}",
+        )
+        return redirect("gestao_conteudo")
+
+    # 4) Mostra o resultado ao professor
+    if resultado["ok"]:
+        messages.success(request, resultado["mensagem"])
+    else:
+        messages.warning(request, resultado["mensagem"])
+
+    return redirect("gestao_conteudo")
 
 
 @professor_required
@@ -812,11 +885,13 @@ def gestao_disciplinas(request):
                 nome=request.POST.get("nome", "").strip(),
                 descricao=request.POST.get("descricao", "").strip(),
                 icone=request.POST.get("icone", "").strip(),
-                cor_primaria=request.POST.get("cor_primaria", "#0066ff").strip() or "#0066ff",
+                cor_primaria=request.POST.get(
+                    "cor_primaria", "#0066ff").strip() or "#0066ff",
             )
             messages.success(request, "Disciplina cadastrada.")
         elif tipo == "licao":
-            disc = Disciplina.objects.filter(id=request.POST.get("disciplina")).first()
+            disc = Disciplina.objects.filter(
+                id=request.POST.get("disciplina")).first()
             if disc:
                 Licao.objects.create(
                     disciplina=disc,
@@ -845,7 +920,8 @@ def configuracoes_aluno(request):
         u.email = request.POST.get("email", u.email).strip()
         u.tema = request.POST.get("tema", u.tema)
         u.notificacoes_email = request.POST.get("notificacoes_email") == "on"
-        u.save(update_fields=["first_name", "email", "tema", "notificacoes_email"])
+        u.save(update_fields=["first_name", "email",
+               "tema", "notificacoes_email"])
         messages.success(request, "Configurações salvas.")
         return redirect("configuracoes_aluno")
 
@@ -864,7 +940,8 @@ def configuracoes_professor(request):
         u.tema = request.POST.get("tema", u.tema)
         u.notificacoes_email = request.POST.get("notificacoes_email") == "on"
         u.turma_nome = request.POST.get("turma_nome", u.turma_nome).strip()
-        u.save(update_fields=["first_name", "email", "tema", "notificacoes_email", "turma_nome"])
+        u.save(update_fields=["first_name", "email",
+               "tema", "notificacoes_email", "turma_nome"])
         messages.success(request, "Configurações salvas.")
         return redirect("configuracoes_professor")
 

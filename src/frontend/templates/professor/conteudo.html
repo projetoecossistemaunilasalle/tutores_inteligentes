@@ -52,5 +52,55 @@
     {% endfor %}
   </div>
 
+
+    <div class="form-card">
+    <div class="panel-section-head"><h3>Material do tutor (PDF)</h3></div>
+    <p style="margin:0 0 12px; color:#666; font-size:14px;">
+      Envie um arquivo PDF para alimentar a base de conhecimento do tutor.
+      Apos o envio, o sistema reindexa o material automaticamente.
+      A reindexacao pode levar alguns minutos.
+    </p>
+    <form method="post"
+          action="{% url 'upload_material_rag' %}"
+          enctype="multipart/form-data"
+          id="form-upload-pdf"
+          onsubmit="mostrarReindexando()">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Arquivo PDF</label>
+        <input class="form-input" type="file" name="material_pdf"
+               accept="application/pdf" required />
+      </div>
+      <button class="btn btn-primary" type="submit" id="btn-upload">
+        Enviar e reindexar
+      </button>
+      <div id="reindexando" style="display:none; margin-top:14px;">
+        <div style="font-size:14px; color:#666; margin-bottom:6px;">
+          Reindexando o material, aguarde...
+        </div>
+        <div style="height:8px; background:#e6e6e6; border-radius:4px; overflow:hidden;">
+          <div style="height:100%; width:40%; background:#2563eb;
+                      border-radius:4px; animation: barraCorre 1.2s infinite;">
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <style>
+    @keyframes barraCorre {
+      0%   { margin-left: -40%; }
+      100% { margin-left: 100%; }
+    }
+  </style>
+
+  <script>
+    function mostrarReindexando() {
+      document.getElementById("btn-upload").disabled = true;
+      document.getElementById("btn-upload").textContent = "Processando...";
+      document.getElementById("reindexando").style.display = "block";
+    }
+  </script>
+
 </div>
 {% endblock %}
