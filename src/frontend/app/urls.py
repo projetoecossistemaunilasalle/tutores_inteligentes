@@ -49,6 +49,9 @@ urlpatterns = [
     path("professor/conteudo/upload-material/",
          views.upload_material_rag, name="upload_material_rag"),
 
+    path("professor/conteudo/remover-material/",
+         views.remover_material_rag, name="remover_material_rag"),
+
     # Troca de senha (primeiro acesso do professor) — views nativas do Django
     path(
         "accounts/password_change/",

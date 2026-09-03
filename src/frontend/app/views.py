@@ -789,13 +789,27 @@ def gestao_videoaulas(request):
     return render(request, "professor/videoaulas.html", ctx)
 
 
+def _listar_pdfs_raw():
+    """Lista os nomes dos PDFs em data/raw/ (material do RAG)."""
+    import os
+    pasta = os.path.join("data", "raw")
+    try:
+        return sorted(
+            f for f in os.listdir(pasta)
+            if f.lower().endswith(".pdf")
+        )
+    except FileNotFoundError:
+        return []
+
+
 @professor_required
 def gestao_conteudo(request):
     """Lista/cria conteudo por nivel.  URL: /professor/conteudo/"""
     ctx = base_ctx(request, "conteudo")
     if not STI_OK:
-        ctx["por_nivel"] = {}
-        return render(request, "professor/conteudo.html", ctx)
+        ctx["por_nivel"] = por_nivel
+    ctx["pdfs_material"] = _listar_pdfs_raw()
+    return render(request, "professor/conteudo.html", ctx)
 
     if request.method == "POST":
         ConteudoAlgoritmos.objects.create(
@@ -872,6 +886,45 @@ def upload_material_rag(request):
     else:
         messages.warning(request, resultado["mensagem"])
 
+    return redirect("gestao_conteudo")
+
+
+@professor_required
+@require_POST
+def remover_material_rag(request):
+    """Remove um PDF de data/raw/ e reindexa o RAG sem ele.
+    URL: /professor/conteudo/remover-material/
+    """
+    import os
+
+    nome = request.POST.get("nome_pdf", "").strip()
+
+    if not nome or "/" in nome or "\\" in nome or ".." in nome:
+        messages.error(request, "Arquivo invalido.")
+        return redirect("gestao_conteudo")
+
+    caminho = os.path.join("data", "raw", nome)
+
+    if not os.path.exists(caminho):
+        messages.error(request, "Arquivo nao encontrado.")
+        return redirect("gestao_conteudo")
+
+    try:
+        os.remove(caminho)
+    except Exception as e:
+        messages.error(request, f"Falha ao remover: {e}")
+        return redirect("gestao_conteudo")
+
+    try:
+        from sti.modulo_dominio.rag.indexador_pdf import reindexar_material
+        resultado = reindexar_material()
+    except Exception as e:
+        messages.warning(
+            request, f"Arquivo removido, mas falhou ao reindexar: {e}")
+        return redirect("gestao_conteudo")
+
+    messages.success(
+        request, f"Material '{nome}' removido. {resultado['mensagem']}")
     return redirect("gestao_conteudo")
 
 
