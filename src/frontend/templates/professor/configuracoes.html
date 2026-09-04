@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Configurações — Prof.ia{% endblock %}
 {% block page_title %}Configurações{% endblock %}
+{% block topbar_extra %}
+  <div class="topbar-divider"></div>
+  <div class="topbar-lesson">Preferências da sua conta</div>
+{% endblock %}
 {% block body %}
 <div class="panel-body">
 
@@ -21,6 +25,31 @@
           <span>Escuro</span>
         </label>
       </div>
+
+      <div class="settings-row" style="margin-top:10px;">
+        <div>
+          <div class="settings-row-label">Reduzir animações</div>
+          <div class="settings-row-desc">Desativa transições e efeitos visuais da interface.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" name="reduzir_animacoes" {% if request.user.reduzir_animacoes %}checked{% endif %} onchange="this.form.submit()" />
+          <span class="switch-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Personalização</div>
+      <div class="settings-row-desc" style="margin-bottom:8px;">Cor do seu avatar na barra lateral.</div>
+      <div class="avatar-options">
+        {% for valor, rotulo in avatar_opcoes %}
+        <label class="avatar-option">
+          <input type="radio" name="avatar_cor" value="{{ valor }}" {% if request.user.avatar_cor == valor %}checked{% endif %} onchange="this.form.submit()" />
+          <span class="avatar-swatch avatar-{{ valor }}">{{ request.user.first_name|default:request.user.username|slice:":2"|upper }}</span>
+          <span class="avatar-option-label">{{ rotulo }}</span>
+        </label>
+        {% endfor %}
+      </div>
     </div>
 
     <div class="settings-section">
@@ -40,11 +69,26 @@
     <div class="settings-section">
       <div class="settings-section-title">Turma</div>
       <div class="form-card">
-        <div class="form-group">
-          <label class="form-label">Nome da turma</label>
-          <input class="form-input" name="turma_nome" type="text" placeholder="Ex.: 3º Ano A" value="{{ request.user.turma_nome }}" />
-          <span class="field-hint">Exibido no seu painel e na barra lateral.</span>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Nome da turma</label>
+            <input class="form-input" name="turma_nome" type="text" placeholder="Ex.: 3º Ano A" value="{{ request.user.turma_nome }}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Código da turma</label>
+            <input class="form-input" name="turma_codigo" type="text" placeholder="Ex.: INF-3A-2026" value="{{ request.user.turma_codigo }}" />
+          </div>
         </div>
+        <div class="form-group">
+          <label class="form-label">Turno</label>
+          <select class="form-input" name="turma_turno">
+            <option value="">— não informado —</option>
+            {% for valor, rotulo in turno_opcoes %}
+            <option value="{{ valor }}" {% if request.user.turma_turno == valor %}selected{% endif %}>{{ rotulo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <span class="field-hint">Exibido no seu painel e na barra lateral.</span>
       </div>
     </div>
 

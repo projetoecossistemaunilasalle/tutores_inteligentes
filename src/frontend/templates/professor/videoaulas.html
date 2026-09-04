@@ -43,7 +43,14 @@
     <div class="panel-section-head"><h3>Videoaulas cadastradas ({{ videoaulas|length }})</h3></div>
     <div class="video-grid">
       {% for v in videoaulas %}
-      <div class="tile" style="padding:0;overflow:hidden;">
+      <div class="tile" style="padding:0;overflow:hidden;position:relative;">
+        <form method="post" action="{% url 'gestao_videoaulas' %}" class="card-delete-form"
+              onsubmit="return confirm('Remover a videoaula \'{{ v.titulo|escapejs }}\'? Essa ação não pode ser desfeita.');">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="excluir" />
+          <input type="hidden" name="videoaula_id" value="{{ v.id }}" />
+          <button class="icon-delete-btn" type="submit" title="Remover videoaula">✕</button>
+        </form>
         <div class="video-frame"><iframe src="{{ v.embed_url }}" title="{{ v.titulo }}" allowfullscreen loading="lazy"></iframe></div>
         <div style="padding:12px;">
           <div class="tile-title" style="font-size:14px;">{{ v.titulo }}</div>

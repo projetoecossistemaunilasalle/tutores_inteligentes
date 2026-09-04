@@ -108,22 +108,59 @@ class Command(BaseCommand):
         w("Niveis e progresso do aluno criados")
 
         # ---------------- Conquistas + Notificacoes ----------------
+        # (codigo, nome, descricao, icone, xp_bonus, categoria)
         conqs = [
-            ("primeiro_login", "Primeiros passos", "Fez o primeiro acesso.", "🎯", 20),
-            ("streak5", "Ritmo constante", "5 dias seguidos de estudo.", "🔥", 50),
-            ("quiz_ace", "Mestre do quiz", "Gabaritou um quiz.", "🧠", 80),
-            ("maratonista", "Maratonista", "Concluiu 10 licoes.", "🏃", 120),
+            # Primeiros passos
+            ("primeiro_login", "Primeiros passos", "Fez o primeiro acesso à plataforma.", "🎯", 20, "inicio"),
+            ("primeira_pergunta", "Quebra-gelo", "Fez a primeira pergunta ao tutor.", "💬", 15, "inicio"),
+            ("primeiro_exercicio", "Mão na massa", "Respondeu ao primeiro exercício.", "✍️", 15, "inicio"),
+            ("primeiro_quiz", "Testando os limites", "Completou o primeiro quiz.", "🧩", 15, "inicio"),
+            ("perfil_completo", "Tudo em ordem", "Preencheu nome e e-mail no perfil.", "🪪", 10, "inicio"),
+            # Consistência
+            ("streak3", "Aquecendo", "3 dias seguidos estudando.", "🔥", 20, "consistencia"),
+            ("streak5", "Ritmo constante", "5 dias seguidos de estudo.", "🔥", 50, "consistencia"),
+            ("streak7", "Uma semana inteira", "7 dias seguidos estudando.", "📅", 80, "consistencia"),
+            ("streak15", "Disciplina de ferro", "15 dias seguidos estudando.", "🗓️", 150, "consistencia"),
+            ("streak30", "Um mês de dedicação", "30 dias seguidos estudando.", "🏅", 300, "consistencia"),
+            # Conversas com o tutor
+            ("perguntas10", "Curioso", "Fez 10 perguntas ao tutor.", "🙋", 30, "conversas"),
+            ("perguntas50", "Investigador", "Fez 50 perguntas ao tutor.", "🔍", 80, "conversas"),
+            ("perguntas100", "Sedento por conhecimento", "Fez 100 perguntas ao tutor.", "📖", 150, "conversas"),
+            # Lições
+            ("primeira_licao", "Primeira vitória", "Concluiu a primeira lição.", "✅", 25, "licoes"),
+            ("maratonista", "Maratonista", "Concluiu todas as lições da matéria.", "🏃", 120, "licoes"),
+            # Quizzes
+            ("quiz_ace", "Mestre do quiz", "Gabaritou um quiz (100%).", "🧠", 80, "quizzes"),
+            ("quiz_veterano", "Veterano dos quizzes", "Completou 5 quizzes.", "🎓", 60, "quizzes"),
+            ("quiz_perfeccionista", "Perfeccionista", "Gabaritou 3 quizzes.", "💯", 150, "quizzes"),
+            # Exercícios
+            ("exercicios10", "Praticante", "Acertou 10 exercícios.", "🏋️", 40, "exercicios"),
+            ("exercicios25", "Treinado", "Acertou 25 exercícios.", "💪", 90, "exercicios"),
+            ("gabarito_mestre", "Gabarito mestre", "Acertou todos os exercícios disponíveis.", "📜", 150, "exercicios"),
+            # Nível & XP
+            ("nivel5", "Ganhando experiência", "Alcançou o nível 5.", "⭐", 40, "progressao"),
+            ("nivel10", "Veterano", "Alcançou o nível 10.", "🌟", 80, "progressao"),
+            ("xp1000", "Colecionador de XP", "Acumulou 1.000 XP.", "🪙", 30, "progressao"),
+            ("xp5000", "Lenda do XP", "Acumulou 5.000 XP.", "🏆", 100, "progressao"),
         ]
         objs = []
-        for cod, nome, desc, ico, xp in conqs:
-            c, _ = Conquista.objects.get_or_create(
-                codigo=cod, defaults=dict(nome=nome, descricao=desc, icone=ico, xp_bonus=xp))
+        for cod, nome, desc, ico, xp, cat in conqs:
+            c, _ = Conquista.objects.update_or_create(
+                codigo=cod,
+                defaults=dict(nome=nome, descricao=desc, icone=ico, xp_bonus=xp, categoria=cat),
+            )
             objs.append(c)
-        for c in objs[:2]:
-            ConquistaUsuario.objects.get_or_create(usuario=aluno, conquista=c)
-        Notificacao.objects.get_or_create(
-            usuario=aluno, titulo="Nova conquista desbloqueada!",
-            defaults=dict(tipo="conquista", corpo="Voce ganhou 'Ritmo constante'. Continue assim!"))
+
+        # Roda a verificação REAL de conquistas contra os dados já semeados
+        # (nível, streak, lição concluída etc.) — nada é forçado; só
+        # desbloqueia o que o aluno já "conquistou" de fato com este estado.
+        from frontend.app.views import _nivel_do, verificar_conquistas
+        nivel_aluno = _nivel_do(aluno)
+        verificar_conquistas(aluno, nivel_aluno)
+        nivel_aluno.save()
+
+        # As notificações de conquista já foram criadas de verdade pelo
+        # verificar_conquistas() acima — uma para cada conquista genuína.
         Notificacao.objects.get_or_create(
             usuario=aluno, titulo="Novo quiz disponivel",
             defaults=dict(tipo="quiz", corpo="Um quiz de Logica Matematica foi liberado."))

@@ -33,6 +33,7 @@ from frontend.app.models.quizzes import (
     Quiz, Questao, Alternativa, TentativaQuiz, RespostaQuiz,
 )
 from frontend.app.models.videoaulas import Videoaula
+from frontend.app.models.exercicios_resp import RespostaExercicio
 
 # --- Models do Grupo 1 (sti / app 'banco_dados') — import tolerante ---
 try:
@@ -141,48 +142,98 @@ def atualizar_streak(nivel):
     nivel.ultima_atividade = hoje
 
 
+def desbloquear_conquista(usuario, nivel, codigo):
+    """Desbloqueia uma conquista pelo código, se ainda não desbloqueada.
+    Concede o XP de bônus e cria uma notificação. Idempotente — pode
+    ser chamada quantas vezes for preciso, só desbloqueia uma vez.
+    Retorna a Conquista se foi desbloqueada agora, ou None."""
+    ja_tem = ConquistaUsuario.objects.filter(
+        usuario=usuario, conquista__codigo=codigo
+    ).exists()
+    if ja_tem:
+        return None
+    conquista = Conquista.objects.filter(codigo=codigo).first()
+    if not conquista:
+        return None
+    ConquistaUsuario.objects.create(usuario=usuario, conquista=conquista)
+    if nivel is not None and conquista.xp_bonus:
+        conceder_xp(nivel, conquista.xp_bonus)
+    Notificacao.objects.create(
+        usuario=usuario, tipo="conquista",
+        titulo="Nova conquista desbloqueada!",
+        corpo=f"Você ganhou '{conquista.nome}'. +{conquista.xp_bonus} XP.",
+    )
+    return conquista
+
+
 def verificar_conquistas(usuario, nivel):
-    """Verifica se o aluno desbloqueou novas conquistas e as registra,
-    concedendo o XP de bônus e criando uma notificação para cada uma."""
+    """Verifica todas as condições de conquista do sistema e desbloqueia
+    as que o aluno já atende, concedendo XP de bônus e notificando.
+    Cada condição é computada a partir de dados reais (mensagens,
+    lições concluídas, tentativas de quiz, exercícios corretos, nível
+    e XP acumulado) — nada aqui é decorativo."""
     ja_desbloqueadas = set(
         ConquistaUsuario.objects.filter(usuario=usuario)
         .values_list("conquista__codigo", flat=True)
     )
-    candidatos = []
 
     total_perguntas = Mensagem.objects.filter(
         conversa__usuario=usuario, papel="aluno"
     ).count()
-    if total_perguntas >= 1:
-        candidatos.append("primeiro_login")
-
-    if nivel.streak_dias >= 5:
-        candidatos.append("streak5")
-
-    total_licoes = Licao.objects.filter(ativa=True).count()
-    if total_licoes and ProgressoLicao.objects.filter(
+    total_licoes_concluidas = ProgressoLicao.objects.filter(
         usuario=usuario, concluida=True
-    ).count() >= total_licoes:
-        candidatos.append("maratonista")
+    ).count()
+    total_licoes_ativas = Licao.objects.filter(ativa=True).count()
+    tentativas_quiz = TentativaQuiz.objects.filter(
+        usuario=usuario, concluido_em__isnull=False
+    )
+    total_quizzes_100 = tentativas_quiz.filter(pontuacao=100).count()
+    total_exercicios_corretos = RespostaExercicio.objects.filter(
+        usuario=usuario, correta=True
+    ).count()
+    total_exercicios_ativos = Exercicio.objects.filter(ativo=True).count() if STI_OK else 0
 
-    if TentativaQuiz.objects.filter(usuario=usuario, pontuacao=100).exists():
-        candidatos.append("quiz_ace")
+    # codigo -> True/False (condição atendida agora)
+    condicoes = {
+        "primeira_pergunta": total_perguntas >= 1,
+        "primeiro_quiz": tentativas_quiz.exists(),
+        "perfil_completo": bool(usuario.first_name) and bool(usuario.email),
+
+        "streak3": nivel.streak_dias >= 3,
+        "streak5": nivel.streak_dias >= 5,
+        "streak7": nivel.streak_dias >= 7,
+        "streak15": nivel.streak_dias >= 15,
+        "streak30": nivel.streak_dias >= 30,
+
+        "perguntas10": total_perguntas >= 10,
+        "perguntas50": total_perguntas >= 50,
+        "perguntas100": total_perguntas >= 100,
+
+        "primeira_licao": total_licoes_concluidas >= 1,
+        "maratonista": total_licoes_ativas > 0 and total_licoes_concluidas >= total_licoes_ativas,
+
+        "quiz_ace": total_quizzes_100 >= 1,
+        "quiz_veterano": tentativas_quiz.count() >= 5,
+        "quiz_perfeccionista": total_quizzes_100 >= 3,
+
+        "primeiro_exercicio": RespostaExercicio.objects.filter(usuario=usuario).exists(),
+        "exercicios10": total_exercicios_corretos >= 10,
+        "exercicios25": total_exercicios_corretos >= 25,
+        "gabarito_mestre": total_exercicios_ativos > 0 and total_exercicios_corretos >= total_exercicios_ativos,
+
+        "nivel5": nivel.nivel >= 5,
+        "nivel10": nivel.nivel >= 10,
+        "xp1000": nivel.xp_total >= 1000,
+        "xp5000": nivel.xp_total >= 5000,
+    }
 
     novas = []
-    for codigo in candidatos:
-        if codigo in ja_desbloqueadas:
+    for codigo, atingida in condicoes.items():
+        if not atingida or codigo in ja_desbloqueadas:
             continue
-        conquista = Conquista.objects.filter(codigo=codigo).first()
-        if not conquista:
-            continue
-        ConquistaUsuario.objects.create(usuario=usuario, conquista=conquista)
-        conceder_xp(nivel, conquista.xp_bonus)
-        Notificacao.objects.create(
-            usuario=usuario, tipo="conquista",
-            titulo="Nova conquista desbloqueada!",
-            corpo=f"Você ganhou '{conquista.nome}'. +{conquista.xp_bonus} XP.",
-        )
-        novas.append(conquista)
+        conquista = desbloquear_conquista(usuario, nivel, codigo)
+        if conquista:
+            novas.append(conquista)
     return novas
 
 
@@ -200,8 +251,7 @@ def avancar_progresso_licao(usuario, licao, nivel):
     um bônus de XP. Retorna o ProgressoLicao atualizado (ou None)."""
     if not licao:
         return None
-    progresso, _ = ProgressoLicao.objects.get_or_create(
-        usuario=usuario, licao=licao)
+    progresso, _ = ProgressoLicao.objects.get_or_create(usuario=usuario, licao=licao)
     if progresso.concluida:
         return progresso
     progresso.etapa_atual = min(progresso.etapa_atual + 1, licao.total_etapas)
@@ -214,13 +264,22 @@ def avancar_progresso_licao(usuario, licao, nivel):
     return progresso
 
 
+AVATAR_GRADIENTES = {
+    "azul": "linear-gradient(135deg,#0066ff,#00aeff)",
+    "verde": "linear-gradient(135deg,#16a34a,#4ade80)",
+    "roxo": "linear-gradient(135deg,#7c3aed,#c084fc)",
+    "laranja": "linear-gradient(135deg,#ea580c,#fb923c)",
+    "rosa": "linear-gradient(135deg,#db2777,#f472b6)",
+}
+
+
 def base_ctx(request, active_nav):
     """Contexto comum ao shell (sidebar + topbar)."""
     ctx = {
         "active_nav": active_nav,
         "disciplinas": list(Disciplina.objects.filter(ativa=True)),
         "avatar_iniciais": _iniciais(request.user),
-        "avatar_cor": "linear-gradient(135deg,#0066ff,#00aeff)",
+        "avatar_cor": AVATAR_GRADIENTES.get(request.user.avatar_cor, AVATAR_GRADIENTES["azul"]),
     }
     if request.user.eh_aluno:
         nivel = _nivel_do(request.user)
@@ -262,7 +321,12 @@ def login_aluno(request):
         elif not usuario.eh_aluno:
             messages.error(request, "Esta conta nao e de aluno.")
         else:
+            primeiro_login = usuario.last_login is None
             login(request, usuario)
+            if primeiro_login:
+                nivel = _nivel_do(usuario)
+                desbloquear_conquista(usuario, nivel, "primeiro_login")
+                nivel.save()
             return redirect("dashboard_aluno")
     return render(request, "aluno/login.html")
 
@@ -296,6 +360,9 @@ def cadastro_aluno(request):
         NivelUsuario.objects.get_or_create(usuario=usuario)
         _garantir_perfil_grupo1(usuario)
         login(request, usuario)
+        nivel = _nivel_do(usuario)
+        desbloquear_conquista(usuario, nivel, "primeiro_login")
+        nivel.save()
         messages.success(request, "Conta criada com sucesso. Bem-vindo!")
         return redirect("dashboard_aluno")
 
@@ -393,8 +460,7 @@ def chat_perguntar_aluno(request):
         return JsonResponse({"erro": "Digite uma pergunta."}, status=400)
 
     disciplina_id = dados.get("disciplina_id")
-    disciplina = Disciplina.objects.filter(
-        id=disciplina_id).first() if disciplina_id else None
+    disciplina = Disciplina.objects.filter(id=disciplina_id).first() if disciplina_id else None
 
     # Garante que o aluno existe no Grupo 1 antes de perguntar.
     _garantir_perfil_grupo1(request.user)
@@ -423,8 +489,7 @@ def chat_perguntar_aluno(request):
             status=502,
         )
 
-    resposta_txt = resultado.get(
-        "resposta") or "Não consegui gerar uma resposta agora."
+    resposta_txt = resultado.get("resposta") or "Não consegui gerar uma resposta agora."
 
     # --- Persiste a conversa (Grupo 2), para exibir no histórico do chat ---
     conversa = (
@@ -439,10 +504,8 @@ def chat_perguntar_aluno(request):
             usuario=request.user, disciplina=disciplina,
             titulo=disciplina.nome if disciplina else "Conversa com o tutor",
         )
-    Mensagem.objects.create(
-        conversa=conversa, papel="aluno", conteudo=pergunta)
-    Mensagem.objects.create(
-        conversa=conversa, papel="tutor", conteudo=resposta_txt)
+    Mensagem.objects.create(conversa=conversa, papel="aluno", conteudo=pergunta)
+    Mensagem.objects.create(conversa=conversa, papel="tutor", conteudo=resposta_txt)
     conversa.total_mensagens = conversa.mensagens.count()
     conversa.save(update_fields=["total_mensagens"])
 
@@ -481,6 +544,8 @@ def chat_perguntar_aluno(request):
 @aluno_required
 def exercicios_aluno(request):
     """Lista exercicios do topico e corrige pela resposta do gabarito.
+    A resposta de cada aluno fica salva (RespostaExercicio), então o
+    feedback persiste entre visitas e alimenta as conquistas de exercícios.
     URL: /aluno/exercicios/"""
     ctx = base_ctx(request, "exercicios")
     if not STI_OK:
@@ -500,26 +565,50 @@ def exercicios_aluno(request):
         ex_id = request.POST.get("exercicio_id")
         resposta = request.POST.get("resposta", "").strip()
         for ex in exercicios:
-            if str(ex.id) == str(ex_id):
-                ex.resposta_enviada = resposta
-                gab = getattr(ex, "gabarito", None)
-                ex.gabarito = gab
-                if gab:
-                    ex.acertou = resposta.lower() == gab.resposta_correta.strip().lower()
-                    ex.feedback = True
-                    if ex.acertou:
-                        nivel = _nivel_do(request.user)
-                        conceder_xp(nivel, 8)
-                        atualizar_streak(nivel)
-                        nivel.save()
-                        verificar_conquistas(request.user, nivel)
-                        nivel.save()
+            if str(ex.id) != str(ex_id):
+                continue
+            gab = getattr(ex, "gabarito", None)
+            if not gab:
+                continue
+            correta = resposta.lower() == gab.resposta_correta.strip().lower()
 
+            anterior = RespostaExercicio.objects.filter(usuario=request.user, exercicio=ex).first()
+            ja_estava_correta = bool(anterior and anterior.correta)
+
+            if anterior:
+                anterior.resposta = resposta
+                anterior.correta = correta
+                anterior.tentativas += 1
+                anterior.save()
+            else:
+                RespostaExercicio.objects.create(
+                    usuario=request.user, exercicio=ex, resposta=resposta, correta=correta,
+                )
+
+            # Só concede XP na primeira vez que o aluno acerta este exercício,
+            # para não permitir reenviar a mesma resposta em loop por XP.
+            if correta and not ja_estava_correta:
+                nivel = _nivel_do(request.user)
+                conceder_xp(nivel, 8)
+                atualizar_streak(nivel)
+                nivel.save()
+                verificar_conquistas(request.user, nivel)
+                nivel.save()
+
+    # Hidrata cada exercício com a última resposta salva deste aluno
+    # (funciona tanto após o POST acima quanto num GET normal).
+    respostas = {
+        r.exercicio_id: r
+        for r in RespostaExercicio.objects.filter(
+            usuario=request.user, exercicio__in=exercicios
+        )
+    }
     for ex in exercicios:
-        if not hasattr(ex, "feedback"):
-            ex.feedback = False
-            ex.resposta_enviada = ""
-            ex.gabarito = getattr(ex, "gabarito", None)
+        r = respostas.get(ex.id)
+        ex.gabarito = getattr(ex, "gabarito", None)
+        ex.feedback = r is not None
+        ex.resposta_enviada = r.resposta if r else ""
+        ex.acertou = r.correta if r else False
 
     ctx.update({"topicos": topicos, "exercicios": exercicios, "topico": topico})
     return render(request, "aluno/exercicios.html", ctx)
@@ -531,8 +620,7 @@ def historico_aluno(request):
     ctx = base_ctx(request, "historico")
     interacoes = []
     if STI_OK:
-        perfil = PerfilAluno.objects.filter(
-            identificador=_aluno_id(request.user)).first()
+        perfil = PerfilAluno.objects.filter(identificador=_aluno_id(request.user)).first()
         if perfil:
             interacoes = list(perfil.interacoes.all()[:50])
     ctx["interacoes"] = interacoes
@@ -554,8 +642,7 @@ def quiz_aluno(request):
         )
         for q in questoes:
             alt_id = request.POST.get(f"q_{q.id}")
-            alt = Alternativa.objects.filter(
-                id=alt_id, questao=q).first() if alt_id else None
+            alt = Alternativa.objects.filter(id=alt_id, questao=q).first() if alt_id else None
             correta = bool(alt and alt.correta)
             acertos += 1 if correta else 0
             RespostaQuiz.objects.create(
@@ -585,17 +672,16 @@ def quiz_aluno(request):
         return render(request, "aluno/quiz.html", ctx)
 
     if quiz:
-        ctx.update({"quiz": quiz, "questoes": list(
-            quiz.questoes.prefetch_related("alternativas"))})
+        ctx.update({"quiz": quiz, "questoes": list(quiz.questoes.prefetch_related("alternativas"))})
     else:
-        ctx.update({"quiz": None, "quizzes": list(
-            Quiz.objects.filter(ativo=True))})
+        ctx.update({"quiz": None, "quizzes": list(Quiz.objects.filter(ativo=True))})
     return render(request, "aluno/quiz.html", ctx)
 
 
 @aluno_required
 def conquistas_aluno(request):
-    """Lista conquistas e notificacoes.  URL: /aluno/conquistas/"""
+    """Lista conquistas (agrupadas por categoria) e notificacoes.
+    URL: /aluno/conquistas/"""
     if request.method == "POST":
         nid = request.POST.get("notificacao_id")
         n = Notificacao.objects.filter(id=nid, usuario=request.user).first()
@@ -609,13 +695,29 @@ def conquistas_aluno(request):
         ConquistaUsuario.objects.filter(usuario=request.user)
         .values_list("conquista_id", flat=True)
     )
-    conquistas = list(Conquista.objects.all())
+    conquistas = list(Conquista.objects.all().order_by("categoria", "xp_bonus"))
     for c in conquistas:
         c.desbloqueada = c.id in desbloqueadas
 
+    rotulos = dict(Conquista.Categoria.choices)
+    ordem_categorias = [
+        "inicio", "consistencia", "conversas", "licoes",
+        "quizzes", "exercicios", "progressao", "geral",
+    ]
+    por_categoria = {cat: [] for cat in ordem_categorias}
+    for c in conquistas:
+        por_categoria.setdefault(c.categoria, []).append(c)
+    grupos = [
+        {"label": rotulos.get(cat, cat), "itens": itens,
+         "total": len(itens), "desbloqueadas": sum(1 for i in itens if i.desbloqueada)}
+        for cat, itens in por_categoria.items() if itens
+    ]
+
     ctx = base_ctx(request, "conquistas")
     ctx.update({
-        "conquistas": conquistas,
+        "grupos_conquistas": grupos,
+        "conquistas_total": len(conquistas),
+        "conquistas_desbloqueadas": len(desbloqueadas),
         "notificacoes": list(Notificacao.objects.filter(usuario=request.user)[:20]),
     })
     return render(request, "aluno/conquistas.html", ctx)
@@ -700,8 +802,7 @@ def detalhe_aluno(request, aluno_id):
         messages.error(request, "Modulo do aluno (Grupo 1) indisponivel.")
         return redirect("dashboard_professor")
     perfil = get_object_or_404(PerfilAluno, id=aluno_id)
-    ctx.update({"perfil": perfil, "interacoes": list(
-        perfil.interacoes.all()[:30])})
+    ctx.update({"perfil": perfil, "interacoes": list(perfil.interacoes.all()[:30])})
     return render(request, "professor/aluno_detalhe.html", ctx)
 
 
@@ -718,8 +819,7 @@ def gestao_qa(request):
         RepositorioQA.objects.create(
             pergunta=request.POST.get("pergunta", "").strip(),
             resposta=request.POST.get("resposta", "").strip(),
-            topico=ConteudoAlgoritmos.objects.filter(
-                id=tid).first() if tid else None,
+            topico=ConteudoAlgoritmos.objects.filter(id=tid).first() if tid else None,
             palavras_chave=request.POST.get("palavras_chave", "").strip(),
         )
         messages.success(request, "Q&A cadastrado.")
@@ -744,8 +844,7 @@ def gestao_exercicios(request):
         tid = request.POST.get("topico")
         ex = Exercicio.objects.create(
             enunciado=request.POST.get("enunciado", "").strip(),
-            topico=ConteudoAlgoritmos.objects.filter(
-                id=tid).first() if tid else None,
+            topico=ConteudoAlgoritmos.objects.filter(id=tid).first() if tid else None,
             nivel=request.POST.get("nivel", "iniciante"),
         )
         Gabarito.objects.create(
@@ -765,8 +864,15 @@ def gestao_exercicios(request):
 
 @professor_required
 def gestao_videoaulas(request):
-    """Lista/cadastra videoaulas.  URL: /professor/videoaulas/"""
+    """Lista/cadastra/exclui videoaulas.  URL: /professor/videoaulas/"""
     if request.method == "POST":
+        if request.POST.get("acao") == "excluir":
+            v = Videoaula.objects.filter(id=request.POST.get("videoaula_id")).first()
+            if v:
+                v.delete()
+                messages.success(request, "Videoaula removida.")
+            return redirect("gestao_videoaulas")
+
         dur = request.POST.get("duracao_minutos") or 0
         did = request.POST.get("disciplina")
         Videoaula.objects.create(
@@ -774,8 +880,7 @@ def gestao_videoaulas(request):
             url_youtube=request.POST.get("url_youtube", "").strip(),
             descricao=request.POST.get("descricao", "").strip(),
             duracao_minutos=int(dur),
-            disciplina=Disciplina.objects.filter(
-                id=did).first() if did else None,
+            disciplina=Disciplina.objects.filter(id=did).first() if did else None,
             cadastrado_por=request.user,
         )
         messages.success(request, "Videoaula cadastrada.")
@@ -789,27 +894,13 @@ def gestao_videoaulas(request):
     return render(request, "professor/videoaulas.html", ctx)
 
 
-def _listar_pdfs_raw():
-    """Lista os nomes dos PDFs em data/raw/ (material do RAG)."""
-    import os
-    pasta = os.path.join("data", "raw")
-    try:
-        return sorted(
-            f for f in os.listdir(pasta)
-            if f.lower().endswith(".pdf")
-        )
-    except FileNotFoundError:
-        return []
-
-
 @professor_required
 def gestao_conteudo(request):
     """Lista/cria conteudo por nivel.  URL: /professor/conteudo/"""
     ctx = base_ctx(request, "conteudo")
     if not STI_OK:
-        ctx["por_nivel"] = por_nivel
-    ctx["pdfs_material"] = _listar_pdfs_raw()
-    return render(request, "professor/conteudo.html", ctx)
+        ctx["por_nivel"] = {}
+        return render(request, "professor/conteudo.html", ctx)
 
     if request.method == "POST":
         ConteudoAlgoritmos.objects.create(
@@ -822,8 +913,7 @@ def gestao_conteudo(request):
         return redirect("gestao_conteudo")
 
     por_nivel = {}
-    rotulos = {"iniciante": "Iniciante",
-               "intermediario": "Intermediario", "avancado": "Avancado"}
+    rotulos = {"iniciante": "Iniciante", "intermediario": "Intermediario", "avancado": "Avancado"}
     for c in ConteudoAlgoritmos.objects.filter(ativo=True):
         por_nivel.setdefault(rotulos.get(c.nivel, c.nivel), []).append(c)
     ctx["por_nivel"] = por_nivel
@@ -831,106 +921,8 @@ def gestao_conteudo(request):
 
 
 @professor_required
-@require_POST
-def upload_material_rag(request):
-    """Recebe um PDF, salva em data/raw/ e reindexa o RAG.
-
-    Serve a mesma tela de gestao de conteudo (professor/conteudo),
-    tratando a parte de material do tutor (PDFs que alimentam o RAG).
-    URL: /professor/conteudo/upload-material/
-    """
-    import os
-
-    arquivo = request.FILES.get("material_pdf")
-
-    # 1) Validacoes basicas antes de salvar
-    if not arquivo:
-        messages.error(request, "Nenhum arquivo foi enviado.")
-        return redirect("gestao_conteudo")
-
-    if not arquivo.name.lower().endswith(".pdf"):
-        messages.error(
-            request,
-            "O arquivo precisa ser um PDF. Envie um arquivo .pdf.",
-        )
-        return redirect("gestao_conteudo")
-
-    # 2) Salva o PDF na pasta data/raw/ (onde o RAG le)
-    # Caminho a partir da raiz do projeto.
-    pasta_raw = os.path.join("data", "raw")
-    os.makedirs(pasta_raw, exist_ok=True)
-    caminho = os.path.join(pasta_raw, arquivo.name)
-
-    try:
-        with open(caminho, "wb") as destino:
-            for parte in arquivo.chunks():
-                destino.write(parte)
-    except Exception as e:
-        messages.error(request, f"Falha ao salvar o arquivo: {e}")
-        return redirect("gestao_conteudo")
-
-    # 3) Reindexa o RAG com protecao (funcao do Passo 1)
-    try:
-        from sti.modulo_dominio.rag.indexador_pdf import reindexar_material
-        resultado = reindexar_material()
-    except Exception as e:
-        messages.error(
-            request,
-            f"Arquivo salvo, mas houve falha ao reindexar: {e}",
-        )
-        return redirect("gestao_conteudo")
-
-    # 4) Mostra o resultado ao professor
-    if resultado["ok"]:
-        messages.success(request, resultado["mensagem"])
-    else:
-        messages.warning(request, resultado["mensagem"])
-
-    return redirect("gestao_conteudo")
-
-
-@professor_required
-@require_POST
-def remover_material_rag(request):
-    """Remove um PDF de data/raw/ e reindexa o RAG sem ele.
-    URL: /professor/conteudo/remover-material/
-    """
-    import os
-
-    nome = request.POST.get("nome_pdf", "").strip()
-
-    if not nome or "/" in nome or "\\" in nome or ".." in nome:
-        messages.error(request, "Arquivo invalido.")
-        return redirect("gestao_conteudo")
-
-    caminho = os.path.join("data", "raw", nome)
-
-    if not os.path.exists(caminho):
-        messages.error(request, "Arquivo nao encontrado.")
-        return redirect("gestao_conteudo")
-
-    try:
-        os.remove(caminho)
-    except Exception as e:
-        messages.error(request, f"Falha ao remover: {e}")
-        return redirect("gestao_conteudo")
-
-    try:
-        from sti.modulo_dominio.rag.indexador_pdf import reindexar_material
-        resultado = reindexar_material()
-    except Exception as e:
-        messages.warning(
-            request, f"Arquivo removido, mas falhou ao reindexar: {e}")
-        return redirect("gestao_conteudo")
-
-    messages.success(
-        request, f"Material '{nome}' removido. {resultado['mensagem']}")
-    return redirect("gestao_conteudo")
-
-
-@professor_required
 def gestao_disciplinas(request):
-    """Lista/cria disciplinas e licoes.  URL: /professor/disciplinas/"""
+    """Lista/cria/exclui disciplinas e licoes.  URL: /professor/disciplinas/"""
     if request.method == "POST":
         tipo = request.POST.get("tipo")
         if tipo == "disciplina":
@@ -938,13 +930,11 @@ def gestao_disciplinas(request):
                 nome=request.POST.get("nome", "").strip(),
                 descricao=request.POST.get("descricao", "").strip(),
                 icone=request.POST.get("icone", "").strip(),
-                cor_primaria=request.POST.get(
-                    "cor_primaria", "#0066ff").strip() or "#0066ff",
+                cor_primaria=request.POST.get("cor_primaria", "#0066ff").strip() or "#0066ff",
             )
             messages.success(request, "Disciplina cadastrada.")
         elif tipo == "licao":
-            disc = Disciplina.objects.filter(
-                id=request.POST.get("disciplina")).first()
+            disc = Disciplina.objects.filter(id=request.POST.get("disciplina")).first()
             if disc:
                 Licao.objects.create(
                     disciplina=disc,
@@ -954,6 +944,11 @@ def gestao_disciplinas(request):
                     total_etapas=int(request.POST.get("total_etapas") or 1),
                 )
                 messages.success(request, "Licao cadastrada.")
+        elif tipo == "excluir_licao":
+            licao = Licao.objects.filter(id=request.POST.get("licao_id")).first()
+            if licao:
+                licao.delete()
+                messages.success(request, "Lição removida.")
         return redirect("gestao_disciplinas")
 
     ctx = base_ctx(request, "disciplinas")
@@ -965,40 +960,101 @@ def gestao_disciplinas(request):
 
 @aluno_required
 def configuracoes_aluno(request):
-    """Configurações do site para o aluno (tema, notificações, perfil).
+    """Configurações do site para o aluno: aparência, notificações,
+    perfil e uma zona de perigo para reiniciar o progresso.
     URL: /aluno/configuracoes/"""
     u = request.user
+
+    if request.method == "POST" and request.POST.get("acao") == "zerar_progresso":
+        if request.POST.get("confirmar_reset") == "on":
+            ProgressoLicao.objects.filter(usuario=u).delete()
+            ConquistaUsuario.objects.filter(usuario=u).delete()
+            nivel = _nivel_do(u)
+            nivel.nivel = 1
+            nivel.xp_total = 0
+            nivel.xp_proximo_nivel = 300
+            nivel.streak_dias = 0
+            nivel.save()
+            messages.success(request, "Seu progresso foi reiniciado.")
+        else:
+            messages.error(request, "Marque a caixa de confirmação para reiniciar o progresso.")
+        return redirect("configuracoes_aluno")
+
     if request.method == "POST":
         u.first_name = request.POST.get("first_name", u.first_name).strip()
         u.email = request.POST.get("email", u.email).strip()
         u.tema = request.POST.get("tema", u.tema)
+        u.avatar_cor = request.POST.get("avatar_cor", u.avatar_cor)
+        u.reduzir_animacoes = request.POST.get("reduzir_animacoes") == "on"
         u.notificacoes_email = request.POST.get("notificacoes_email") == "on"
-        u.save(update_fields=["first_name", "email",
-               "tema", "notificacoes_email"])
+        u.save(update_fields=[
+            "first_name", "email", "tema", "avatar_cor",
+            "reduzir_animacoes", "notificacoes_email",
+        ])
         messages.success(request, "Configurações salvas.")
         return redirect("configuracoes_aluno")
 
     ctx = base_ctx(request, "configuracoes")
+    ctx["avatar_opcoes"] = Usuario.Avatar.choices
     return render(request, "aluno/configuracoes.html", ctx)
 
 
 @professor_required
+def gestao_quizzes(request):
+    """Lista/cria/exclui quizzes.  URL: /professor/quizzes/
+    A montagem de perguntas continua sendo feita via /admin/ ou pela IA;
+    aqui o professor cadastra o quiz (título/disciplina) e pode removê-lo."""
+    if request.method == "POST":
+        if request.POST.get("acao") == "excluir":
+            q = Quiz.objects.filter(id=request.POST.get("quiz_id")).first()
+            if q:
+                q.delete()
+                messages.success(request, "Quiz removido.")
+            return redirect("gestao_quizzes")
+
+        did = request.POST.get("disciplina")
+        Quiz.objects.create(
+            titulo=request.POST.get("titulo", "").strip(),
+            descricao=request.POST.get("descricao", "").strip(),
+            disciplina=Disciplina.objects.filter(id=did).first() if did else None,
+        )
+        messages.success(request, "Quiz cadastrado. Adicione as perguntas pelo /admin/.")
+        return redirect("gestao_quizzes")
+
+    ctx = base_ctx(request, "quizzes")
+    ctx.update({
+        "quizzes": list(Quiz.objects.select_related("disciplina").prefetch_related("questoes")),
+        "disciplinas": list(Disciplina.objects.filter(ativa=True)),
+    })
+    return render(request, "professor/quizzes.html", ctx)
+
+
+@professor_required
 def configuracoes_professor(request):
-    """Configurações do site para o professor (tema, notificações, turma).
+    """Configurações do site para o professor: aparência, notificações,
+    identificação da turma e perfil.
     URL: /professor/configuracoes/"""
     u = request.user
     if request.method == "POST":
         u.first_name = request.POST.get("first_name", u.first_name).strip()
         u.email = request.POST.get("email", u.email).strip()
         u.tema = request.POST.get("tema", u.tema)
+        u.avatar_cor = request.POST.get("avatar_cor", u.avatar_cor)
+        u.reduzir_animacoes = request.POST.get("reduzir_animacoes") == "on"
         u.notificacoes_email = request.POST.get("notificacoes_email") == "on"
         u.turma_nome = request.POST.get("turma_nome", u.turma_nome).strip()
-        u.save(update_fields=["first_name", "email",
-               "tema", "notificacoes_email", "turma_nome"])
+        u.turma_codigo = request.POST.get("turma_codigo", u.turma_codigo).strip()
+        u.turma_turno = request.POST.get("turma_turno", u.turma_turno)
+        u.save(update_fields=[
+            "first_name", "email", "tema", "avatar_cor", "reduzir_animacoes",
+            "notificacoes_email", "turma_nome", "turma_codigo", "turma_turno",
+        ])
         messages.success(request, "Configurações salvas.")
         return redirect("configuracoes_professor")
 
     ctx = base_ctx(request, "configuracoes")
+    ctx["avatar_opcoes"] = Usuario.Avatar.choices
+    ctx["turno_opcoes"] = Usuario.Turno.choices
     return render(request, "professor/configuracoes.html", ctx)
 
 

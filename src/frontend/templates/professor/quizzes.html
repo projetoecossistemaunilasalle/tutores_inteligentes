@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Quizzes — Prof.ia{% endblock %}
+{% block page_title %}Gestão de quizzes{% endblock %}
+{% block body %}
+<div class="panel-body">
+
+  <div class="form-card">
+    <div class="panel-section-head"><h3>Novo quiz</h3></div>
+    <form method="post" action="{% url 'gestao_quizzes' %}">
+      {% csrf_token %}
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Título</label>
+          <input class="form-input" name="titulo" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Disciplina</label>
+          <select class="form-input" name="disciplina">
+            <option value="">— sem disciplina —</option>
+            {% for d in disciplinas %}<option value="{{ d.id }}">{{ d.nome }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea class="form-input" name="descricao" rows="2"></textarea>
+      </div>
+      <div class="form-note">As perguntas e alternativas de cada quiz são cadastradas pelo /admin/ (ou geradas pela IA). Aqui você cria o quiz e pode removê-lo.</div>
+      <button class="btn btn-primary" type="submit">Cadastrar quiz</button>
+    </form>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Quizzes cadastrados ({{ quizzes|length }})</h3></div>
+    {% for q in quizzes %}
+    <div class="list-item">
+      <div class="li-main">
+        <div class="li-title">{{ q.titulo }}</div>
+        <div class="li-sub">{% if q.disciplina %}{{ q.disciplina.nome }} · {% endif %}{{ q.questoes.count }} pergunta(s)
+          {% if q.gerado_por_ia %}· <span class="tag ok">IA</span>{% endif %}
+          {% if not q.ativo %}· <span class="tag risk">Inativo</span>{% endif %}</div>
+      </div>
+      <form method="post" action="{% url 'gestao_quizzes' %}"
+            onsubmit="return confirm('Remover o quiz \'{{ q.titulo|escapejs }}\'? As tentativas dos alunos nele também serão apagadas.');">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="excluir" />
+        <input type="hidden" name="quiz_id" value="{{ q.id }}" />
+        <button class="btn btn-danger" type="submit">Remover</button>
+      </form>
+    </div>
+    {% empty %}
+    <div class="empty"><div class="empty-ico">🧩</div><p>Nenhum quiz cadastrado.</p></div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

@@ -5,7 +5,7 @@ Inclui todos os endpoints para o Grupo 2 consumir.
 
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import path, include
+from django.urls import include, path
 
 from sti.banco_dados.chat_view import chat, perguntar
 from sti.banco_dados.views_desempenho import desempenho
@@ -21,8 +21,8 @@ from sti.banco_dados.views_notificacoes import (
 )
 
 
-def home(request):
-    """Rota raiz — lista todas as rotas disponiveis."""
+def status_api(request):
+    """Rota de status da API (JSON) — lista todos os endpoints do Grupo 1."""
     return JsonResponse({
         "sistema": "STI",
         "status": "ok",
@@ -49,11 +49,9 @@ def home(request):
 
 
 urlpatterns = [
-    # Raiz administrativa e admin
-    # A rota raiz da interface de usuario fica no app `frontend`.
-    # Mantemos uma rota administrativa para o serviço STI em `/sti/`.
-    path("sti/", home),
+    # Admin e status da API
     path("admin/", admin.site.urls),
+    path("status/", status_api, name="status_api"),
 
     # Interface de teste
     path("chat/", chat, name="chat"),
@@ -96,7 +94,10 @@ urlpatterns = [
         name="aluno_detalhes",
     ),
 
-    # Telas do Grupo 2 (Frontend) — servidas pelo mesmo servidor
+    # ------------------------------------------------------------------ #
+    # JANELAS DO GRUPO 2 (Frontend) — Mapa de Telas                       #
+    # Mantido por ultimo: as rotas do Grupo 2 usam prefixos proprios      #
+    # (/aluno/, /professor/) e a raiz "" (tela inicial).                  #
+    # ------------------------------------------------------------------ #
     path("", include("frontend.app.urls")),
-
 ]

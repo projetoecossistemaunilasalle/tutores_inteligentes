@@ -94,3 +94,22 @@ STATICFILES_DIRS = [BASE_DIR / "src" / "frontend" / "static"]
 LOGIN_URL = "/aluno/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
+
+# ------------------------------------------------------------------ #
+# E-MAIL (redefinição de senha)                                        #
+# Por padrão, os e-mails são apenas impressos no terminal (nenhuma      #
+# configuração extra é necessária para testar). Para enviar e-mails    #
+# de verdade, defina EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD    #
+# no .env — o backend muda sozinho para SMTP quando EMAIL_HOST existe. #
+# ------------------------------------------------------------------ #
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+if EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    DEFAULT_FROM_EMAIL = "naoresponda@profia.local"

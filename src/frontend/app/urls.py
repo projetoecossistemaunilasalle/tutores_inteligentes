@@ -18,39 +18,26 @@ urlpatterns = [
     path("aluno/cadastro/", views.cadastro_aluno, name="cadastro_aluno"),
     path("aluno/dashboard/", views.dashboard_aluno, name="dashboard_aluno"),
     path("aluno/chat/", views.chat_aluno, name="chat_aluno"),
-    path("aluno/chat/perguntar/", views.chat_perguntar_aluno,
-         name="chat_perguntar_aluno"),
+    path("aluno/chat/perguntar/", views.chat_perguntar_aluno, name="chat_perguntar_aluno"),
     path("aluno/exercicios/", views.exercicios_aluno, name="exercicios_aluno"),
     path("aluno/historico/", views.historico_aluno, name="historico_aluno"),
     path("aluno/quiz/", views.quiz_aluno, name="quiz_aluno"),
     path("aluno/conquistas/", views.conquistas_aluno, name="conquistas_aluno"),
     path("aluno/videoaulas/", views.videoaulas_aluno, name="videoaulas_aluno"),
-    path("aluno/configuracoes/", views.configuracoes_aluno,
-         name="configuracoes_aluno"),
+    path("aluno/configuracoes/", views.configuracoes_aluno, name="configuracoes_aluno"),
 
     # PARTE 3 — Professor
     path("professor/login/", views.login_professor, name="login_professor"),
-    path("professor/primeiro-acesso/", views.primeiro_acesso_professor,
-         name="primeiro_acesso_professor"),
-    path("professor/dashboard/", views.dashboard_professor,
-         name="dashboard_professor"),
-    path("professor/aluno/<int:aluno_id>/",
-         views.detalhe_aluno, name="detalhe_aluno"),
+    path("professor/primeiro-acesso/", views.primeiro_acesso_professor, name="primeiro_acesso_professor"),
+    path("professor/dashboard/", views.dashboard_professor, name="dashboard_professor"),
+    path("professor/aluno/<int:aluno_id>/", views.detalhe_aluno, name="detalhe_aluno"),
     path("professor/qa/", views.gestao_qa, name="gestao_qa"),
-    path("professor/exercicios/", views.gestao_exercicios,
-         name="gestao_exercicios"),
-    path("professor/videoaulas/", views.gestao_videoaulas,
-         name="gestao_videoaulas"),
+    path("professor/exercicios/", views.gestao_exercicios, name="gestao_exercicios"),
+    path("professor/videoaulas/", views.gestao_videoaulas, name="gestao_videoaulas"),
+    path("professor/quizzes/", views.gestao_quizzes, name="gestao_quizzes"),
     path("professor/conteudo/", views.gestao_conteudo, name="gestao_conteudo"),
-    path("professor/disciplinas/", views.gestao_disciplinas,
-         name="gestao_disciplinas"),
-    path("professor/configuracoes/", views.configuracoes_professor,
-         name="configuracoes_professor"),
-    path("professor/conteudo/upload-material/",
-         views.upload_material_rag, name="upload_material_rag"),
-
-    path("professor/conteudo/remover-material/",
-         views.remover_material_rag, name="remover_material_rag"),
+    path("professor/disciplinas/", views.gestao_disciplinas, name="gestao_disciplinas"),
+    path("professor/configuracoes/", views.configuracoes_professor, name="configuracoes_professor"),
 
     # Troca de senha (primeiro acesso do professor) — views nativas do Django
     path(
@@ -61,8 +48,41 @@ urlpatterns = [
         ),
         name="password_change",
     ),
-    path("accounts/password_change/done/",
-         views.senha_alterada, name="password_change_done"),
+    path("accounts/password_change/done/", views.senha_alterada, name="password_change_done"),
+
+    # Redefinição de senha por e-mail ("Esqueci minha senha")
+    path(
+        "accounts/password_reset/",
+        auth_views.PasswordResetView.as_view(
+            template_name="registration/password_reset_form.html",
+            email_template_name="registration/password_reset_email.html",
+            subject_template_name="registration/password_reset_subject.txt",
+            success_url=reverse_lazy("password_reset_done"),
+        ),
+        name="password_reset",
+    ),
+    path(
+        "accounts/password_reset/enviado/",
+        auth_views.PasswordResetDoneView.as_view(
+            template_name="registration/password_reset_done.html",
+        ),
+        name="password_reset_done",
+    ),
+    path(
+        "accounts/reset/<uidb64>/<token>/",
+        auth_views.PasswordResetConfirmView.as_view(
+            template_name="registration/password_reset_confirm.html",
+            success_url=reverse_lazy("password_reset_complete"),
+        ),
+        name="password_reset_confirm",
+    ),
+    path(
+        "accounts/reset/concluido/",
+        auth_views.PasswordResetCompleteView.as_view(
+            template_name="registration/password_reset_complete.html",
+        ),
+        name="password_reset_complete",
+    ),
 
     # Sessao
     path("sair/", views.sair, name="sair"),

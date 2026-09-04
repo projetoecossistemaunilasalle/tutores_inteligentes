@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Configurações — Prof.ia{% endblock %}
 {% block page_title %}Configurações{% endblock %}
+{% block topbar_extra %}
+  <div class="topbar-divider"></div>
+  <div class="topbar-lesson">Preferências da sua conta</div>
+{% endblock %}
 {% block body %}
 <div class="panel-body">
 
@@ -20,6 +24,31 @@
           <div class="theme-swatch escuro"></div>
           <span>Escuro</span>
         </label>
+      </div>
+
+      <div class="settings-row" style="margin-top:10px;">
+        <div>
+          <div class="settings-row-label">Reduzir animações</div>
+          <div class="settings-row-desc">Desativa transições e efeitos visuais da interface.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" name="reduzir_animacoes" {% if request.user.reduzir_animacoes %}checked{% endif %} onchange="this.form.submit()" />
+          <span class="switch-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Personalização</div>
+      <div class="settings-row-desc" style="margin-bottom:8px;">Cor do seu avatar na barra lateral.</div>
+      <div class="avatar-options">
+        {% for valor, rotulo in avatar_opcoes %}
+        <label class="avatar-option">
+          <input type="radio" name="avatar_cor" value="{{ valor }}" {% if request.user.avatar_cor == valor %}checked{% endif %} onchange="this.form.submit()" />
+          <span class="avatar-swatch avatar-{{ valor }}">{{ request.user.first_name|default:request.user.username|slice:":2"|upper }}</span>
+          <span class="avatar-option-label">{{ rotulo }}</span>
+        </label>
+        {% endfor %}
       </div>
     </div>
 
@@ -65,5 +94,41 @@
     <a class="btn" href="{% url 'password_change' %}">Alterar senha</a>
   </div>
 
+  <div class="settings-section">
+    <div class="settings-section-title" style="color:var(--red);">Zona de perigo</div>
+    <div class="danger-zone">
+      <div style="flex:1;">
+        <div class="settings-row-label">Reiniciar meu progresso</div>
+        <div class="settings-row-desc">
+          Apaga seu nível, XP, sequência de dias, lições concluídas e conquistas.
+          O histórico de conversas com o tutor não é afetado. Essa ação não pode ser desfeita.
+        </div>
+      </div>
+      <button class="btn btn-danger" type="button" onclick="document.getElementById('resetModal').classList.remove('hidden')">Reiniciar progresso</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="resetModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Reiniciar progresso?</h3>
+      <button class="modal-close" onclick="document.getElementById('resetModal').classList.add('hidden')">✕</button>
+    </div>
+    <p class="modal-sub">Isso vai zerar seu nível, XP, sequência de dias, lições concluídas e conquistas. Não pode ser desfeito.</p>
+    <form method="post" action="{% url 'configuracoes_aluno' %}">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="zerar_progresso" />
+      <label class="settings-row" style="margin-top:4px;">
+        <span class="settings-row-label" style="font-weight:400;">Sim, tenho certeza — quero reiniciar tudo</span>
+        <input type="checkbox" name="confirmar_reset" required style="width:18px;height:18px;accent-color:var(--red);" />
+      </label>
+      <div class="form-row" style="justify-content:flex-end;margin-top:14px;">
+        <button class="btn" type="button" onclick="document.getElementById('resetModal').classList.add('hidden')">Cancelar</button>
+        <button class="btn btn-danger" type="submit">Reiniciar progresso</button>
+      </div>
+    </form>
+  </div>
 </div>
 {% endblock %}

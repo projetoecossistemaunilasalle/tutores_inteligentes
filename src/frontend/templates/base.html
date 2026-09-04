@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="{{ request.user.tema|default:'claro' }}">
+<html lang="pt-BR" data-theme="{{ request.user.tema|default:'claro' }}" data-motion="{% if request.user.reduzir_animacoes %}reduzido{% else %}normal{% endif %}">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -35,6 +35,7 @@
       <a class="nav-item {% if active_nav == 'exercicios' %}active{% endif %}" href="{% url 'gestao_exercicios' %}">Exercícios</a>
       <a class="nav-item {% if active_nav == 'qa' %}active{% endif %}" href="{% url 'gestao_qa' %}">Repositório de Q&amp;A</a>
       <a class="nav-item {% if active_nav == 'videoaulas' %}active{% endif %}" href="{% url 'gestao_videoaulas' %}">Videoaulas</a>
+      <a class="nav-item {% if active_nav == 'quizzes' %}active{% endif %}" href="{% url 'gestao_quizzes' %}">Quizzes</a>
       <a class="nav-item {% if active_nav == 'configuracoes' %}active{% endif %}" href="{% url 'configuracoes_professor' %}">Configurações</a>
     </div>
     {% else %}
@@ -81,7 +82,7 @@
           <div class="xp-bar"><div class="xp-fill" id="sidebarXpFill" style="width:{{ xp_pct|default:0 }}%"></div></div>
           {% endif %}
         </div>
-        <a class="logout-btn" href="{% url 'sair' %}" title="Sair">✕</a>
+        <a class="logout-btn" href="{% url 'sair' %}" title="Sair">Sair</a>
       </div>
     </div>
   </aside>

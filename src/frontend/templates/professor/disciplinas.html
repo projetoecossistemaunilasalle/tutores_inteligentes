@@ -52,7 +52,16 @@
         <span class="tag">{{ d.licoes.count }} lições</span>
       </div>
       {% for l in d.licoes.all %}
-      <div class="li-sub" style="padding-left:22px;">• {{ l.ordem }}. {{ l.titulo }} ({{ l.total_etapas }} etapas)</div>
+      <div class="li-sub" style="padding-left:22px;display:flex;align-items:center;gap:8px;">
+        <span style="flex:1;">• {{ l.ordem }}. {{ l.titulo }} ({{ l.total_etapas }} etapas)</span>
+        <form method="post" action="{% url 'gestao_disciplinas' %}"
+              onsubmit="return confirm('Remover a lição \'{{ l.titulo|escapejs }}\'? O progresso dos alunos nela também será apagado.');">
+          {% csrf_token %}
+          <input type="hidden" name="tipo" value="excluir_licao" />
+          <input type="hidden" name="licao_id" value="{{ l.id }}" />
+          <button class="btn btn-danger" type="submit" style="padding:3px 10px;font-size:11px;">Remover</button>
+        </form>
+      </div>
       {% endfor %}
     </div>
     {% empty %}

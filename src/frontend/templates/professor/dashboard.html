@@ -3,7 +3,10 @@
 {% block page_title %}Desempenho da turma{% endblock %}
 {% block topbar_extra %}
   <div class="topbar-divider"></div>
-  <div class="topbar-lesson">Turma: <strong>{{ turma_nome }}</strong></div>
+  <div class="topbar-lesson">Turma: <strong>{{ turma_nome }}</strong>
+    {% if request.user.turma_codigo %}<span class="li-sub">· {{ request.user.turma_codigo }}</span>{% endif %}
+    {% if request.user.get_turma_turno_display %}<span class="tag">{{ request.user.get_turma_turno_display }}</span>{% endif %}
+  </div>
   <div class="topbar-actions"><div class="online-badge"><span class="online-dot"></span> Dados atualizados hoje</div></div>
 {% endblock %}
 
