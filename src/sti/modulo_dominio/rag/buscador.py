@@ -40,6 +40,8 @@ SINONIMOS_DOMINIO = {
     "comando se": "estrutura condicional selecao if",
     "senao": "estrutura condicional else",
     "repita": "estrutura de repeticao laco",
+    "output": "saida exibir resultado tela console",
+    "input": "entrada leitura digitado teclado",
 }
 
 
