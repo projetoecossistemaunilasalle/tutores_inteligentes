@@ -150,7 +150,7 @@
   }
   .form-input:focus { border-color: rgba(0, 247, 255, 0.6); }
   .form-input.error { border-color: rgba(248,113,113,0.6); }
-  .form-input::placeholder { color: var(--muted2); }
+  .form-input::placeholder { color: #3b82f6; opacity: 0.7; }
 
   .form-row { display: flex; gap: 12px; }
   .form-row .form-group { flex: 1; }
@@ -305,13 +305,18 @@
   .user-level { font-size: 11px; color: var(--muted2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .xp-bar { height: 3px; background: var(--border2); border-radius: 2px; margin-top: 4px; }
   .xp-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #00b7ff); border-radius: 2px; transition: width 0.5s; }
-  .logout-btn {
-    margin-left: auto; font-size: 11px; font-weight: 600; color: var(--muted);
-    background: none; border: 1px solid var(--border2); cursor: pointer;
-    padding: 5px 10px; border-radius: 999px; text-decoration: none;
-    white-space: nowrap; flex-shrink: 0; transition: color 0.15s, border-color 0.15s;
+    .logout-btn {
+    margin-left: auto; font-size: 12px; font-weight: 700;
+    color: #ef4444; background: #1d4ed8;
+    border: none; cursor: pointer;
+    padding: 7px 16px; border-radius: 8px;
+    text-decoration: none; white-space: nowrap;
+    flex-shrink: 0; letter-spacing: 0.03em;
+    transition: background 0.15s, color 0.15s, transform 0.1s;
   }
-  .logout-btn:hover { color: var(--red); border-color: rgba(248,113,113,0.5); }
+  .logout-btn:hover {
+    background: #1e40af; color: #fca5a5; transform: scale(1.03);
+  }
 
   .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   .main.hidden { display: none; }
@@ -513,7 +518,7 @@
     color: var(--text); font-size: 14px; font-family: var(--font-body);
     resize: none; min-height: 22px; max-height: 120px; line-height: 1.5; scrollbar-width: none;
   }
-  #userInput::placeholder { color: var(--muted2); }
+  #userInput::placeholder { color: #3b82f6; opacity: 0.7; }
   .input-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .action-btn {
     width: 32px; height: 32px; border-radius: var(--radius-sm);
