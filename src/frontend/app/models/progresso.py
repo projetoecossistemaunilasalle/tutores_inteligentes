@@ -116,6 +116,16 @@ class NivelUsuario(models.Model):
 class Conquista(models.Model):
     """Conquista (badge) disponivel no sistema."""
 
+    class Categoria(models.TextChoices):
+        INICIO = "inicio", "Primeiros passos"
+        CONSISTENCIA = "consistencia", "Consistência"
+        CONVERSAS = "conversas", "Conversas com o tutor"
+        LICOES = "licoes", "Lições"
+        QUIZZES = "quizzes", "Quizzes"
+        EXERCICIOS = "exercicios", "Exercícios"
+        PROGRESSAO = "progressao", "Nível & XP"
+        GERAL = "geral", "Geral"
+
     # ------------------------------------------------------------------ #
     # 1) IDENTIFICACAO                                                     #
     # ------------------------------------------------------------------ #
@@ -127,6 +137,12 @@ class Conquista(models.Model):
     nome = models.CharField("Nome", max_length=100)
     descricao = models.TextField("Descricao", blank=True)
     icone = models.CharField("Icone", max_length=10, blank=True)
+    categoria = models.CharField(
+        "Categoria",
+        max_length=20,
+        choices=Categoria.choices,
+        default=Categoria.GERAL,
+    )
     xp_bonus = models.SmallIntegerField("XP bonus", default=0)
     criado_em = models.DateTimeField("Criado em", auto_now_add=True)
 

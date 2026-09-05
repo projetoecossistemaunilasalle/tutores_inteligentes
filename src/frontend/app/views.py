@@ -141,6 +141,30 @@ def atualizar_streak(nivel):
     nivel.ultima_atividade = hoje
 
 
+def desbloquear_conquista(usuario, nivel, codigo):
+    """Desbloqueia uma conquista pelo codigo, se ainda nao desbloqueada.
+    Concede o XP de bonus e cria uma notificacao. Idempotente — pode
+    ser chamada quantas vezes for preciso, so desbloqueia uma vez.
+    Retorna a Conquista se foi desbloqueada agora, ou None."""
+    ja_tem = ConquistaUsuario.objects.filter(
+        usuario=usuario, conquista__codigo=codigo
+    ).exists()
+    if ja_tem:
+        return None
+    conquista = Conquista.objects.filter(codigo=codigo).first()
+    if not conquista:
+        return None
+    ConquistaUsuario.objects.create(usuario=usuario, conquista=conquista)
+    if nivel is not None and conquista.xp_bonus:
+        conceder_xp(nivel, conquista.xp_bonus)
+    Notificacao.objects.create(
+        usuario=usuario, tipo="conquista",
+        titulo="Nova conquista desbloqueada!",
+        corpo=f"Voce ganhou '{conquista.nome}'. +{conquista.xp_bonus} XP.",
+    )
+    return conquista
+
+
 def verificar_conquistas(usuario, nivel):
     """Verifica se o aluno desbloqueou novas conquistas e as registra,
     concedendo o XP de bônus e criando uma notificação para cada uma."""
@@ -926,6 +950,36 @@ def remover_material_rag(request):
     messages.success(
         request, f"Material '{nome}' removido. {resultado['mensagem']}")
     return redirect("gestao_conteudo")
+
+
+@professor_required
+def gestao_quizzes(request):
+    """Lista/cria/exclui quizzes.  URL: /professor/quizzes/"""
+    if request.method == "POST":
+        if request.POST.get("acao") == "excluir":
+            q = Quiz.objects.filter(id=request.POST.get("quiz_id")).first()
+            if q:
+                q.delete()
+                messages.success(request, "Quiz removido.")
+            return redirect("gestao_quizzes")
+
+        did = request.POST.get("disciplina")
+        Quiz.objects.create(
+            titulo=request.POST.get("titulo", "").strip(),
+            descricao=request.POST.get("descricao", "").strip(),
+            disciplina=Disciplina.objects.filter(
+                id=did).first() if did else None,
+        )
+        messages.success(
+            request, "Quiz cadastrado. Adicione as perguntas pelo /admin/.")
+        return redirect("gestao_quizzes")
+
+    ctx = base_ctx(request, "quizzes")
+    ctx.update({
+        "quizzes": list(Quiz.objects.select_related("disciplina").prefetch_related("questoes")),
+        "disciplinas": list(Disciplina.objects.filter(ativa=True)),
+    })
+    return render(request, "professor/quizzes.html", ctx)
 
 
 @professor_required

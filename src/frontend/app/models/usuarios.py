@@ -75,12 +75,55 @@ class Usuario(AbstractUser):
         help_text="Receber avisos de novas conquistas, quizzes e atividades por e-mail.",
     )
 
+    class Avatar(models.TextChoices):
+        AZUL = "azul", "Azul"
+        VERDE = "verde", "Verde"
+        ROXO = "roxo", "Roxo"
+        LARANJA = "laranja", "Laranja"
+        ROSA = "rosa", "Rosa"
+
+    avatar_cor = models.CharField(
+        max_length=10,
+        choices=Avatar.choices,
+        default=Avatar.AZUL,
+        verbose_name="Cor do avatar",
+        help_text="Cor do círculo com as iniciais exibido na barra lateral.",
+    )
+
+    reduzir_animacoes = models.BooleanField(
+        default=False,
+        verbose_name="Reduzir animações",
+        help_text="Desativa transições e animações da interface (acessibilidade).",
+    )
+
     turma_nome = models.CharField(
         max_length=100,
         blank=True,
         default="",
         verbose_name="Turma (professor)",
         help_text="Nome da turma exibido no painel do professor.",
+    )
+
+    class Turno(models.TextChoices):
+        MANHA = "manha", "Manhã"
+        TARDE = "tarde", "Tarde"
+        NOITE = "noite", "Noite"
+        INTEGRAL = "integral", "Integral"
+
+    turma_turno = models.CharField(
+        max_length=10,
+        choices=Turno.choices,
+        blank=True,
+        default="",
+        verbose_name="Turno da turma (professor)",
+    )
+
+    turma_codigo = models.CharField(
+        max_length=30,
+        blank=True,
+        default="",
+        verbose_name="Código da turma (professor)",
+        help_text="Código ou identificador interno da turma, se houver.",
     )
 
     class Meta:

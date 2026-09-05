@@ -27,20 +27,31 @@
   </div>
 
   <div class="panel-section">
-    <div class="panel-section-head"><h3>Minhas conquistas</h3></div>
-    <div class="badge-grid">
-      {% for c in conquistas %}
-      <div class="badge {% if not c.desbloqueada %}locked{% endif %}">
-        <div class="badge-ico">{{ c.icone|default:"🏆" }}</div>
-        <div class="badge-name">{{ c.nome }}</div>
-        <div class="badge-desc">{{ c.descricao }}</div>
-        {% if c.desbloqueada %}<div class="tag ok" style="margin-top:8px;display:inline-block;">Conquistada</div>
-        {% else %}<div class="tag" style="margin-top:8px;display:inline-block;">+{{ c.xp_bonus }} XP</div>{% endif %}
-      </div>
-      {% empty %}
-      <div class="empty"><div class="empty-ico">🏆</div><p>Nenhuma conquista cadastrada.</p></div>
-      {% endfor %}
+    <div class="panel-section-head">
+      <h3>Minhas conquistas</h3>
+      <span class="tag">{{ conquistas_desbloqueadas }} / {{ conquistas_total }} desbloqueadas</span>
     </div>
+
+    {% for grupo in grupos_conquistas %}
+    <div class="settings-section">
+      <div class="settings-section-title">{{ grupo.label }}
+        <span class="li-sub" style="font-weight:400;">({{ grupo.desbloqueadas }}/{{ grupo.total }})</span>
+      </div>
+      <div class="badge-grid">
+        {% for c in grupo.itens %}
+        <div class="badge {% if not c.desbloqueada %}locked{% endif %}">
+          <div class="badge-ico">{{ c.icone|default:"🏆" }}</div>
+          <div class="badge-name">{{ c.nome }}</div>
+          <div class="badge-desc">{{ c.descricao }}</div>
+          {% if c.desbloqueada %}<div class="tag ok" style="margin-top:8px;display:inline-block;">Conquistada</div>
+          {% else %}<div class="tag" style="margin-top:8px;display:inline-block;">+{{ c.xp_bonus }} XP</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty"><div class="empty-ico">🏆</div><p>Nenhuma conquista cadastrada.</p></div>
+    {% endfor %}
   </div>
 
 </div>
