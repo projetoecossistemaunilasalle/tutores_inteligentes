@@ -522,6 +522,17 @@
     border: 1px solid var(--border2); color: var(--muted);
     background: transparent; cursor: pointer; transition: all 0.15s; white-space: nowrap;
   }
+    .sug-pill-destaque {
+    background: linear-gradient(135deg, #0066ff, #00aeff);
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    text-decoration: none;
+  }
+  .sug-pill-destaque:hover {
+    background: linear-gradient(135deg, #0052cc, #0090dd);
+    color: #fff;
+  }
   .sug-pill:hover { border-color: var(--accent); color: var(--accent2); background: rgba(124,106,247,0.08); }
 
   .input-bar { padding: 14px 28px 18px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }

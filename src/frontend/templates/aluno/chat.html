@@ -13,7 +13,6 @@
   <div class="topbar-actions">
     <div class="online-badge"><span class="online-dot"></span> Online</div>
     <button class="icon-btn" title="Reiniciar" onclick="clearChat()">↺</button>
-    <button class="icon-btn" title="Quiz" onclick="sendSuggestion('Gere um quiz de 3 perguntas sobre o tema atual')">🧩</button>
     <button class="icon-btn" title="Resumo" onclick="sendSuggestion('Faça um resumo do que discutimos até agora')">📝</button>
     <button class="icon-btn" title="Configurar API" onclick="openApiKeyModal()">🔑</button>
   </div>
@@ -33,9 +32,11 @@
 <div class="suggestions-row">
   <button class="sug-pill" onclick="sendSuggestion('Me dê uma dica sobre o tema')">💡 Dica</button>
   <button class="sug-pill" onclick="sendSuggestion('Explique com um exemplo prático')">📖 Exemplo prático</button>
-  <button class="sug-pill" onclick="sendSuggestion('Quero um exercício para praticar')">🧩 Exercício</button>
-  <button class="sug-pill" onclick="sendSuggestion('Explique de forma mais simples')">🔁 Mais simples</button>
+  <button class="sug-pill" onclick="sendSuggestion('Explique de forma mais simples')">📝 Mais simples</button>
   <button class="sug-pill" onclick="sendSuggestion('Qual é o próximo tema?')">✅ Próximo tema</button>
+  <a href="{% url 'exercicios_aluno' %}" class="sug-pill sug-pill-destaque">
+    🎯 Vamos ver se fui claro? Faça um teste aqui
+  </a>
 </div>
 
 <div class="input-bar">
