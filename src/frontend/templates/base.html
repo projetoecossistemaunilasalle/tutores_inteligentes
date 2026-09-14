@@ -30,11 +30,11 @@
     <div class="sidebar-section">
       <div class="sidebar-label">Acompanhamento</div>
       <a class="nav-item {% if active_nav == 'dashboard' %}active{% endif %}" href="{% url 'dashboard_professor' %}">Desempenho da turma</a>
+      <a class="nav-item {% if active_nav == 'alunos' %}active{% endif %}" href="{% url 'cadastro_alunos' %}">Alunos</a>
       <a class="nav-item {% if active_nav == 'disciplinas' %}active{% endif %}" href="{% url 'gestao_disciplinas' %}">Disciplinas e lições</a>
       <a class="nav-item {% if active_nav == 'conteudo' %}active{% endif %}" href="{% url 'gestao_conteudo' %}">Base de conhecimento</a>
-      <a class="nav-item {% if active_nav == 'exercicios' %}active{% endif %}" href="{% url 'gestao_exercicios' %}">Exercícios</a>
-              <a class="nav-item {% if active_nav == 'quizzes' %}active{% endif %}" href="{% url 'gestao_quizzes' %}">Quizzes</a>
-      <a class="nav-item {% if active_nav == 'qa' %}active{% endif %}" href="{% url 'gestao_qa' %}">Repositório de Q&amp;A</a>
+      <a class="nav-item {% if active_nav == 'quizzes' %}active{% endif %}" href="{% url 'gestao_quizzes' %}">Exercícios de Fixação</a>
+      <a class="nav-item {% if active_nav == 'qa' %}active{% endif %}" href="{% url 'gestao_qa' %}">Perguntas Frequentes</a>
       <a class="nav-item {% if active_nav == 'videoaulas' %}active{% endif %}" href="{% url 'gestao_videoaulas' %}">Videoaulas</a>
       <a class="nav-item {% if active_nav == 'configuracoes' %}active{% endif %}" href="{% url 'configuracoes_professor' %}">Configurações</a>
     </div>
@@ -47,7 +47,7 @@
       <a class="nav-item {% if active_nav == 'videoaulas' %}active{% endif %}" href="{% url 'videoaulas_aluno' %}">Videoaulas</a>
       <a class="nav-item {% if active_nav == 'historico' %}active{% endif %}" href="{% url 'historico_aluno' %}">Histórico</a>
       <a class="nav-item {% if active_nav == 'conquistas' %}active{% endif %}" href="{% url 'conquistas_aluno' %}">Meu Desempenho</a>
-      <a class="nav-item {% if active_nav == 'configuracoes' %}active{% endif %}" href="{% url 'configuracoes_aluno' %}">Configurações</a>
+      <a class="nav-item {% if active_nav == 'configuracoes' %}active{% endif %}" href="{% url 'configuracoes_aluno' %}">Perfil</a>
     </div>
     {% endif %}
 

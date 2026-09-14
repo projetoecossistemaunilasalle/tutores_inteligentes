@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Alunos — Prof.ia{% endblock %}
+{% block page_title %}Alunos{% endblock %}
+{% block body %}
+<div class="panel-body">
+
+  <div class="form-card">
+    <div class="panel-section-head"><h3>Cadastrar novo aluno</h3></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+      A senha inicial do aluno será a própria matrícula.
+      No primeiro acesso, o aluno deverá atualizar seus dados no perfil.
+    </p>
+    <form method="post" action="{% url 'cadastro_alunos' %}">
+      {% csrf_token %}
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Nome completo</label>
+          <input class="form-input" name="nome" required placeholder="Ex: João Silva" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Matrícula</label>
+          <input class="form-input" name="matricula" required placeholder="Ex: 2024001234" />
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit">Cadastrar aluno</button>
+    </form>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Alunos cadastrados ({{ alunos|length }})</h3></div>
+    {% for a in alunos %}
+    <div class="list-item">
+      <div class="li-main">
+        <div class="li-title">{{ a.first_name|default:a.username }}</div>
+        <div class="li-sub">
+          Matrícula: {{ a.identificador_aluno|default:a.username }}
+          {% if a.disciplina_atual %} · {{ a.disciplina_atual.nome }}{% endif %}
+          {% if a.primeiro_acesso %}<span class="tag risk">Primeiro acesso pendente</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty">
+      <div class="empty-ico">👤</div>
+      <p>Nenhum aluno cadastrado ainda.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

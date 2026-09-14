@@ -43,6 +43,7 @@ urlpatterns = [
          name="gestao_videoaulas"),
     path("professor/conteudo/", views.gestao_conteudo, name="gestao_conteudo"),
     path("professor/quizzes/", views.gestao_quizzes, name="gestao_quizzes"),
+    path("professor/alunos/", views.cadastro_alunos, name="cadastro_alunos"),
     path("professor/disciplinas/", views.gestao_disciplinas,
          name="gestao_disciplinas"),
     path("professor/configuracoes/", views.configuracoes_professor,
