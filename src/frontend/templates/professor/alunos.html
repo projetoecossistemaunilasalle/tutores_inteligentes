@@ -38,6 +38,21 @@
           {% if a.primeiro_acesso %}<span class="tag risk">Primeiro acesso pendente</span>{% endif %}
         </div>
       </div>
+      <div class="li-actions">
+        <form method="post" action="{% url 'cadastro_alunos' %}"
+              onsubmit="return confirm('Deseja remover o aluno {{ a.first_name|default:a.username }}?')"
+              style="margin:0;">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="excluir_aluno" />
+          <input type="hidden" name="aluno_id" value="{{ a.id }}" />
+          <button type="submit"
+                  style="background:#dc2626;color:#fff;border:none;
+                         padding:4px 10px;border-radius:5px;cursor:pointer;
+                         font-size:12px;">
+            Remover
+          </button>
+        </form>
+      </div>
     </div>
     {% empty %}
     <div class="empty">

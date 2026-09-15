@@ -646,7 +646,7 @@ def quiz_aluno(request):
 
 @aluno_required
 def conquistas_aluno(request):
-    """Lista conquistas e notificacoes.  URL: /aluno/conquistas/"""
+    """Desempenho, conquistas e notificacoes. URL: /aluno/conquistas/"""
     if request.method == "POST":
         nid = request.POST.get("notificacao_id")
         n = Notificacao.objects.filter(id=nid, usuario=request.user).first()
@@ -656,8 +656,30 @@ def conquistas_aluno(request):
             n.save(update_fields=["lida", "lida_em"])
         return redirect("conquistas_aluno")
 
+    usuario = request.user
+    nivel = _nivel_do(usuario)
+
+    # Metricas de exercicios
+    tentativas = TentativaQuiz.objects.filter(
+        usuario=usuario,
+        concluido_em__isnull=False
+    ).select_related("quiz").order_by("-concluido_em")
+
+    total_tentativas = tentativas.count()
+    media_pontuacao = 0
+    total_pontos = 0
+    if total_tentativas > 0:
+        from django.db.models import Avg, Sum
+        agg = tentativas.aggregate(
+            media=Avg("pontuacao"),
+            total_xp=Sum("xp_ganho")
+        )
+        media_pontuacao = round(agg["media"] or 0, 1)
+        total_pontos = agg["total_xp"] or 0
+
+    # Conquistas
     desbloqueadas = set(
-        ConquistaUsuario.objects.filter(usuario=request.user)
+        ConquistaUsuario.objects.filter(usuario=usuario)
         .values_list("conquista_id", flat=True)
     )
     conquistas = list(Conquista.objects.all())
@@ -666,8 +688,15 @@ def conquistas_aluno(request):
 
     ctx = base_ctx(request, "conquistas")
     ctx.update({
+        "nivel": nivel,
+        "tentativas": tentativas[:10],
+        "total_tentativas": total_tentativas,
+        "media_pontuacao": media_pontuacao,
+        "total_pontos": total_pontos,
         "conquistas": conquistas,
-        "notificacoes": list(Notificacao.objects.filter(usuario=request.user)[:20]),
+        "notificacoes": list(
+            Notificacao.objects.filter(usuario=usuario)[:20]
+        ),
     })
     return render(request, "aluno/conquistas.html", ctx)
 
@@ -1076,6 +1105,16 @@ def cadastro_alunos(request):
     """Cadastro e listagem de alunos pelo professor.
     URL: /professor/alunos/"""
     if request.method == "POST":
+        if request.POST.get("acao") == "excluir_aluno":
+            aluno = Usuario.objects.filter(
+                id=request.POST.get("aluno_id"),
+                papel="aluno"
+            ).first()
+            if aluno:
+                aluno.delete()
+                messages.success(request, f"Aluno removido.")
+            return redirect("cadastro_alunos")
+
         nome = request.POST.get("nome", "").strip()
         matricula = request.POST.get("matricula", "").strip()
 

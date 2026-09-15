@@ -1,9 +1,95 @@
 {% extends "base.html" %}
-{% block title %}Conquistas — Prof.ia{% endblock %}
-{% block page_title %}Conquistas e notificações{% endblock %}
+{% block title %}Meu Desempenho — Prof.ia{% endblock %}
+{% block page_title %}Meu Desempenho{% endblock %}
 {% block body %}
 <div class="panel-body">
 
+  <!-- SECAO 1: METRICAS DE EXERCICIOS -->
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Exercícios de Fixação</h3></div>
+
+    <div class="perf-hero" style="margin-bottom:20px;">
+      <div class="perf-block">
+        <div class="perf-block-title">Tentativas</div>
+        <div class="stat-value">{{ total_tentativas }}</div>
+        <div class="stat-label">exercícios respondidos</div>
+      </div>
+      <div class="perf-block">
+        <div class="perf-block-title">Média de acertos</div>
+        <div class="stat-value">{{ media_pontuacao }}%</div>
+        <div class="stat-label">de aproveitamento</div>
+      </div>
+      <div class="perf-block">
+        <div class="perf-block-title">Pontuação total</div>
+        <div class="stat-value">{{ total_pontos }}</div>
+        <div class="stat-label">pontos acumulados</div>
+      </div>
+      <div class="perf-block">
+        <div class="perf-block-title">Nível atual</div>
+        <div class="stat-value">{{ nivel.nivel }}</div>
+        <div class="stat-label">{{ nivel.xp_total }} pontos no total</div>
+      </div>
+    </div>
+
+    {% if tentativas %}
+    <div class="panel-section-head" style="margin-top:8px;"><h3>Histórico recente</h3></div>
+    {% for t in tentativas %}
+    <div class="list-item">
+      <div class="li-main">
+        <div class="li-title">{{ t.quiz.titulo }}</div>
+        <div class="li-sub">
+          {{ t.acertos }}/{{ t.total }} acertos ·
+          {{ t.pontuacao }}% ·
+          +{{ t.xp_ganho }} pontos ·
+          {{ t.concluido_em|date:"d/m/Y H:i" }}
+        </div>
+      </div>
+      <div>
+        {% if t.pontuacao >= 70 %}
+        <span class="tag ok">Bom</span>
+        {% elif t.pontuacao >= 50 %}
+        <span class="tag">Regular</span>
+        {% else %}
+        <span class="tag risk">Revisar</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty">
+      <div class="empty-ico">📝</div>
+      <p>Você ainda não fez nenhum exercício.<br>
+         Acesse o <a href="{% url 'chat_aluno' %}">Tutor IA</a> e clique em
+         "Vamos ver se fui claro? Faça um teste aqui".</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- SECAO 2: CONQUISTAS -->
+  {% if conquistas %}
+  <div class="panel-section">
+    <div class="panel-section-head">
+      <h3>Conquistas</h3>
+      <span class="tag">{{ conquistas|length }} disponíveis</span>
+    </div>
+    <div class="badge-grid">
+      {% for c in conquistas %}
+      <div class="badge {% if not c.desbloqueada %}locked{% endif %}">
+        <div class="badge-ico">{{ c.icone|default:"🏆" }}</div>
+        <div class="badge-name">{{ c.nome }}</div>
+        <div class="badge-desc">{{ c.descricao }}</div>
+        {% if c.desbloqueada %}
+        <div class="tag ok" style="margin-top:8px;display:inline-block;">Conquistada</div>
+        {% else %}
+        <div class="tag" style="margin-top:8px;display:inline-block;">+{{ c.xp_bonus }} pontos</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SECAO 3: NOTIFICACOES -->
   <div class="panel-section">
     <div class="panel-section-head"><h3>Notificações</h3></div>
     {% for n in notificacoes %}
@@ -23,34 +109,6 @@
     </div>
     {% empty %}
     <div class="field-hint">Nenhuma notificação no momento.</div>
-    {% endfor %}
-  </div>
-
-  <div class="panel-section">
-    <div class="panel-section-head">
-      <h3>Desempenho</h3>
-      <span class="tag">{{ conquistas_desbloqueadas }} / {{ conquistas_total }} desbloqueadas</span>
-    </div>
-
-    {% for grupo in grupos_conquistas %}
-    <div class="settings-section">
-      <div class="settings-section-title">{{ grupo.label }}
-        <span class="li-sub" style="font-weight:400;">({{ grupo.desbloqueadas }}/{{ grupo.total }})</span>
-      </div>
-      <div class="badge-grid">
-        {% for c in grupo.itens %}
-        <div class="badge {% if not c.desbloqueada %}locked{% endif %}">
-          <div class="badge-ico">{{ c.icone|default:"🏆" }}</div>
-          <div class="badge-name">{{ c.nome }}</div>
-          <div class="badge-desc">{{ c.descricao }}</div>
-          {% if c.desbloqueada %}<div class="tag ok" style="margin-top:8px;display:inline-block;">Conquistada</div>
-          {% else %}<div class="tag" style="margin-top:8px;display:inline-block;">+{{ c.xp_bonus }} XP</div>{% endif %}
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% empty %}
-    <div class="empty"><div class="empty-ico">🏆</div><p>Nenhuma conquista cadastrada.</p></div>
     {% endfor %}
   </div>
 
