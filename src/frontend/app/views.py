@@ -981,29 +981,91 @@ def remover_material_rag(request):
 
 @professor_required
 def gestao_quizzes(request):
-    """Lista/cria/exclui quizzes.  URL: /professor/quizzes/"""
+    """Gestao completa de exercicios de fixacao.
+    URL: /professor/quizzes/"""
     if request.method == "POST":
-        if request.POST.get("acao") == "excluir":
+        acao = request.POST.get("acao", "")
+
+        # --- Criar quiz ---
+        if acao == "criar_quiz":
+            did = request.POST.get("disciplina")
+            Quiz.objects.create(
+                titulo=request.POST.get("titulo", "").strip(),
+                descricao=request.POST.get("descricao", "").strip(),
+                disciplina=Disciplina.objects.filter(
+                    id=did).first() if did else None,
+            )
+            messages.success(request, "Conjunto de exercícios cadastrado.")
+            return redirect("gestao_quizzes")
+
+        # --- Excluir quiz ---
+        if acao == "excluir_quiz":
             q = Quiz.objects.filter(id=request.POST.get("quiz_id")).first()
             if q:
                 q.delete()
-                messages.success(request, "Quiz removido.")
+                messages.success(request, "Conjunto removido.")
             return redirect("gestao_quizzes")
 
-        did = request.POST.get("disciplina")
-        Quiz.objects.create(
-            titulo=request.POST.get("titulo", "").strip(),
-            descricao=request.POST.get("descricao", "").strip(),
-            disciplina=Disciplina.objects.filter(
-                id=did).first() if did else None,
-        )
-        messages.success(
-            request, "Quiz cadastrado. Adicione as perguntas pelo /admin/.")
-        return redirect("gestao_quizzes")
+        # --- Adicionar questao ---
+        if acao == "adicionar_questao":
+            quiz = Quiz.objects.filter(id=request.POST.get("quiz_id")).first()
+            if quiz:
+                enunciado = request.POST.get("enunciado", "").strip()
+                if enunciado:
+                    ordem = quiz.questoes.count() + 1
+                    Questao.objects.create(
+                        quiz=quiz,
+                        enunciado=enunciado,
+                        tipo="multipla",
+                        explicacao=request.POST.get("explicacao", "").strip(),
+                        ordem=ordem,
+                    )
+                    messages.success(request, "Questão adicionada.")
+            return redirect("gestao_quizzes")
+
+        # --- Excluir questao ---
+        if acao == "excluir_questao":
+            q = Questao.objects.filter(
+                id=request.POST.get("questao_id")).first()
+            if q:
+                q.delete()
+                messages.success(request, "Questão removida.")
+            return redirect("gestao_quizzes")
+
+        # --- Adicionar alternativa ---
+        if acao == "adicionar_alternativa":
+            questao = Questao.objects.filter(
+                id=request.POST.get("questao_id")).first()
+            if questao:
+                texto = request.POST.get("texto", "").strip()
+                correta = request.POST.get("correta") == "on"
+                if texto:
+                    if correta:
+                        questao.alternativas.update(correta=False)
+                    Alternativa.objects.create(
+                        questao=questao,
+                        texto=texto,
+                        correta=correta,
+                        ordem=questao.alternativas.count() + 1,
+                    )
+                    messages.success(request, "Alternativa adicionada.")
+            return redirect("gestao_quizzes")
+
+        # --- Excluir alternativa ---
+        if acao == "excluir_alternativa":
+            a = Alternativa.objects.filter(
+                id=request.POST.get("alternativa_id")).first()
+            if a:
+                a.delete()
+                messages.success(request, "Alternativa removida.")
+            return redirect("gestao_quizzes")
 
     ctx = base_ctx(request, "quizzes")
     ctx.update({
-        "quizzes": list(Quiz.objects.select_related("disciplina").prefetch_related("questoes")),
+        "quizzes": list(
+            Quiz.objects.select_related("disciplina")
+            .prefetch_related("questoes__alternativas")
+        ),
         "disciplinas": list(Disciplina.objects.filter(ativa=True)),
     })
     return render(request, "professor/quizzes.html", ctx)

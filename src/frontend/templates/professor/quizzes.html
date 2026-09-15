@@ -1,20 +1,21 @@
 {% extends "base.html" %}
-{% block title %}Quizzes — Prof.ia{% endblock %}
-{% block page_title %}Gestão de quizzes{% endblock %}
+{% block title %}Exercícios de Fixação — Prof.ia{% endblock %}
+{% block page_title %}Exercícios de Fixação{% endblock %}
 {% block body %}
 <div class="panel-body">
 
   <div class="form-card">
-    <div class="panel-section-head"><h3>Novo quiz</h3></div>
+    <div class="panel-section-head"><h3>Novo conjunto de exercícios</h3></div>
     <form method="post" action="{% url 'gestao_quizzes' %}">
       {% csrf_token %}
+      <input type="hidden" name="acao" value="criar_quiz" />
       <div class="form-group">
         <label class="form-label">Título</label>
-        <input class="form-input" name="titulo" required />
+        <input class="form-input" name="titulo" required placeholder="Ex: Exercícios sobre Variáveis" />
       </div>
       <div class="form-group">
         <label class="form-label">Descrição</label>
-        <textarea class="form-input" name="descricao" rows="2"></textarea>
+        <textarea class="form-input" name="descricao" rows="2" placeholder="Breve descrição do conjunto"></textarea>
       </div>
       <div class="form-group">
         <label class="form-label">Disciplina</label>
@@ -25,45 +26,121 @@
           {% endfor %}
         </select>
       </div>
-      <button class="btn btn-primary" type="submit">Salvar quiz</button>
+      <button class="btn btn-primary" type="submit">Salvar conjunto</button>
     </form>
   </div>
 
-  <div class="panel-section">
-    <div class="panel-section-head"><h3>Quizzes cadastrados ({{ quizzes|length }})</h3></div>
-    {% for q in quizzes %}
-    <div class="list-item">
-      <div class="li-main">
-        <div class="li-title">{{ q.titulo }}</div>
-        <div class="li-sub">
-          {% if q.disciplina %}{{ q.disciplina.nome }} · {% endif %}
-          {{ q.questoes.count }} questão(ões)
-          {% if q.ativo %}<span class="tag ok">Ativo</span>{% else %}<span class="tag risk">Inativo</span>{% endif %}
+  {% for q in quizzes %}
+  <div class="form-card" style="margin-top:20px;">
+    <div class="panel-section-head" style="display:flex;justify-content:space-between;align-items:center;">
+      <h3>{{ q.titulo }}</h3>
+      <form method="post" action="{% url 'gestao_quizzes' %}"
+            onsubmit="return confirm('Remover este conjunto e todas as suas questões?')"
+            style="margin:0;">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="excluir_quiz" />
+        <input type="hidden" name="quiz_id" value="{{ q.id }}" />
+        <button type="submit"
+                style="background:#dc2626;color:#fff;border:none;
+                       padding:4px 10px;border-radius:5px;cursor:pointer;font-size:12px;">
+          Remover conjunto
+        </button>
+      </form>
+    </div>
+
+    {% if q.disciplina %}
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+      Disciplina: {{ q.disciplina.nome }} · {{ q.questoes.count }} questão(ões)
+    </div>
+    {% endif %}
+
+    {% for questao in q.questoes.all %}
+    <div class="list-item" style="flex-direction:column;align-items:flex-start;gap:8px;">
+      <div style="display:flex;justify-content:space-between;width:100%;">
+        <div>
+          <div class="li-title">Q{{ forloop.counter }}. {{ questao.enunciado }}</div>
+          {% if questao.explicacao %}
+          <div class="li-sub">Explicação: {{ questao.explicacao }}</div>
+          {% endif %}
         </div>
-      </div>
-      <div class="li-actions">
-        <form method="post" action="{% url 'gestao_quizzes' %}"
-              onsubmit="return confirm('Remover o quiz \'{{ q.titulo }}\'?')"
-              style="margin:0;">
+        <form method="post" action="{% url 'gestao_quizzes' %}" style="margin:0;">
           {% csrf_token %}
-          <input type="hidden" name="acao" value="excluir" />
-          <input type="hidden" name="quiz_id" value="{{ q.id }}" />
-          <button type="submit" class="btn btn-sm"
+          <input type="hidden" name="acao" value="excluir_questao" />
+          <input type="hidden" name="questao_id" value="{{ questao.id }}" />
+          <button type="submit"
                   style="background:#dc2626;color:#fff;border:none;
-                         padding:4px 10px;border-radius:5px;cursor:pointer;
-                         font-size:12px;">
+                         padding:4px 8px;border-radius:5px;cursor:pointer;font-size:11px;">
             Remover
           </button>
         </form>
       </div>
+
+      <div style="width:100%;padding-left:12px;">
+        {% for alt in questao.alternativas.all %}
+        <div style="display:flex;justify-content:space-between;align-items:center;
+                    padding:4px 8px;margin-bottom:4px;border-radius:4px;
+                    background:{% if alt.correta %}rgba(0,200,100,0.1){% else %}var(--surface2){% endif %};">
+          <span style="font-size:13px;">
+            {% if alt.correta %}✅{% else %}○{% endif %} {{ alt.texto }}
+          </span>
+          <form method="post" action="{% url 'gestao_quizzes' %}" style="margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="excluir_alternativa" />
+            <input type="hidden" name="alternativa_id" value="{{ alt.id }}" />
+            <button type="submit"
+                    style="background:none;border:none;color:var(--muted);
+                           cursor:pointer;font-size:11px;">✕</button>
+          </form>
+        </div>
+        {% endfor %}
+
+        <form method="post" action="{% url 'gestao_quizzes' %}"
+              style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="adicionar_alternativa" />
+          <input type="hidden" name="questao_id" value="{{ questao.id }}" />
+          <input class="form-input" name="texto" placeholder="Nova alternativa..." style="flex:1;" required />
+          <label style="font-size:12px;color:var(--muted);white-space:nowrap;">
+            <input type="checkbox" name="correta" /> Correta
+          </label>
+          <button class="btn btn-primary" type="submit" style="white-space:nowrap;">Adicionar</button>
+        </form>
+      </div>
     </div>
     {% empty %}
-    <div class="empty">
-      <div class="empty-ico">🧩</div>
-      <p>Nenhum quiz cadastrado. Crie um acima e adicione as questões pelo painel de administração.</p>
+    <div style="font-size:13px;color:var(--muted);padding:8px 0;">
+      Nenhuma questão ainda. Adicione abaixo.
     </div>
     {% endfor %}
+
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">
+        Adicionar questão
+      </div>
+      <form method="post" action="{% url 'gestao_quizzes' %}">
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="adicionar_questao" />
+        <input type="hidden" name="quiz_id" value="{{ q.id }}" />
+        <div class="form-group">
+          <label class="form-label">Enunciado</label>
+          <textarea class="form-input" name="enunciado" rows="2"
+                    placeholder="Ex: O que é uma variável?" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Explicação (aparece após o aluno responder)</label>
+          <input class="form-input" name="explicacao"
+                 placeholder="Ex: Uma variável armazena um valor na memória." />
+        </div>
+        <button class="btn btn-primary" type="submit">Adicionar questão</button>
+      </form>
+    </div>
   </div>
+  {% empty %}
+  <div class="empty" style="margin-top:20px;">
+    <div class="empty-ico">📝</div>
+    <p>Nenhum conjunto cadastrado. Crie um acima.</p>
+  </div>
+  {% endfor %}
 
 </div>
 {% endblock %}
