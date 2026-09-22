@@ -847,6 +847,17 @@ def gestao_exercicios(request):
 def gestao_videoaulas(request):
     """Lista/cadastra videoaulas.  URL: /professor/videoaulas/"""
     if request.method == "POST":
+        # --- Excluir videoaula ---
+        if request.POST.get("acao") == "excluir":
+            v = Videoaula.objects.filter(
+                id=request.POST.get("video_id")).first()
+            if v:
+                v.delete()
+                messages.success(request, "Videoaula removida.")
+                return redirect("gestao_videoaulas")
+        # --- fim do bloco de exclusão ---
+
+        # --- Criar videoaula ---
         dur = request.POST.get("duracao_minutos") or 0
         did = request.POST.get("disciplina")
         Videoaula.objects.create(

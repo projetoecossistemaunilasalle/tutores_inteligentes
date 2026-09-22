@@ -43,15 +43,30 @@
     <div class="panel-section-head"><h3>Videoaulas cadastradas ({{ videoaulas|length }})</h3></div>
     <div class="video-grid">
       {% for v in videoaulas %}
-      <div class="tile" style="padding:0;overflow:hidden;">
-        <div class="video-frame"><iframe src="{{ v.embed_url }}" title="{{ v.titulo }}" allowfullscreen loading="lazy"></iframe></div>
-        <div style="padding:12px;">
-          <div class="tile-title" style="font-size:14px;">{{ v.titulo }}</div>
-          <div class="tile-foot"><span class="tag">{{ v.disciplina.nome|default:"Geral" }}</span>
-            {% if not v.ativa %}<span class="tag risk">Inativa</span>{% endif %}</div>
-        </div>
-      </div>
-      {% empty %}
+<div class="tile" style="padding:0;overflow:hidden;">
+  <div class="video-frame"><iframe src="{{ v.embed_url }}" title="{{ v.titulo }}" allowfullscreen loading="lazy"></iframe></div>
+  <div style="padding:12px;">
+    <div class="tile-title" style="font-size:14px;">{{ v.titulo }}</div>
+    <div class="tile-foot"><span class="tag">{{ v.disciplina.nome|default:"Geral" }}</span>
+      {% if not v.ativa %}<span class="tag risk">Inativa</span>{% endif %}</div>
+  </div>
+  <div style="padding:0 12px 12px;">
+    <form method="post" action="{% url 'gestao_videoaulas' %}"
+          onsubmit="return confirm('Remover a videoaula \'{{ v.titulo }}\'?')"
+          style="margin:0;">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="excluir" />
+      <input type="hidden" name="video_id" value="{{ v.id }}" />
+      <button type="submit" class="btn btn-sm"
+              style="background:#dc2626;color:#fff;border:none;
+                     padding:4px 10px;border-radius:5px;cursor:pointer;
+                     font-size:12px;width:100%;">
+        Remover
+      </button>
+    </form>
+  </div>
+</div>
+{% empty %}
       <div class="empty"><div class="empty-ico">🎬</div><p>Nenhuma videoaula cadastrada.</p></div>
       {% endfor %}
     </div>
