@@ -136,20 +136,20 @@
 
   /* Form */
   .login-form { display: flex; flex-direction: column; gap: 14px; }
-  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group { display: flex; flex-direction: column; gap: 9px; }
   .form-label {
     font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0.04em;
-    text-transform: uppercase; padding-bottom: 4px;
+    text-transform: uppercase; padding-bottom: 4px; border-bottom: 2px solid var(--accent2);
   }
   .form-input {
     padding: 11px 14px; background: var(--surface2);
-    border: 1px solid rgba(0, 102, 255, 0.25);
+    border: 1px solid var(--accent2);
     border-radius: var(--radius-sm);
     color: var(--text); font-size: 14px; font-family: var(--font-body);
     outline: none; transition: border-color 0.2s;
     width: 100%;
   }
-  .form-input:focus { border-color: rgba(0, 247, 255, 0.6); }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .form-input.error { border-color: rgba(248,113,113,0.6); }
   .form-input::placeholder { color: #3b82f6; opacity: 0.7; }
 
@@ -538,10 +538,10 @@
   .input-bar { padding: 14px 28px 18px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
   .input-wrap {
     display: flex; align-items: flex-end; gap: 10px;
-    background: var(--surface2); border: 1px solid var(--border2);
+    background: var(--surface2); border: 1px solid var(--accent2);
     border-radius: var(--radius); padding: 10px 12px; transition: border-color 0.2s;
   }
-  .input-wrap:focus-within { border-color: rgba(252, 252, 252, 0.966); }
+  .input-wrap:focus-within { border-color: var(--accent); }
   #userInput {
     flex: 1; background: transparent; border: none; outline: none;
     color: var(--text); font-size: 14px; font-family: var(--font-body);
