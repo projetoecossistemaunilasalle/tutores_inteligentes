@@ -3,11 +3,20 @@
 {% block page_title %}Videoaulas{% endblock %}
 {% block body %}
 <div class="panel-body">
+
+  {# ── Videoaulas ── #}
   <div class="video-grid">
     {% for v in videoaulas %}
     <div class="tile" style="padding:0;overflow:hidden;">
-      <div class="video-frame">
-        <iframe src="{{ v.embed_url }}" title="{{ v.titulo }}" allowfullscreen loading="lazy"></iframe>
+      <div class="video-frame" style="background:#0f172a;display:flex;align-items:center;justify-content:center;min-height:140px;">
+        <div style="text-align:center;padding:20px;">
+          <div style="font-size:36px;margin-bottom:8px;">🎬</div>
+          <div style="color:#94a3b8;font-size:13px;margin-bottom:12px;">{{ v.titulo }}</div>
+          <a href="{{ v.url_youtube }}" target="_blank" rel="noopener"
+             class="btn btn-primary" style="font-size:13px;padding:6px 16px;">
+            ▶ Assistir no YouTube
+          </a>
+        </div>
       </div>
       <div style="padding:14px;">
         <div class="tile-title" style="font-size:15px;">{{ v.titulo }}</div>
@@ -19,8 +28,27 @@
       </div>
     </div>
     {% empty %}
-    <div class="empty"><div class="empty-ico">🎬</div><p>Nenhuma videoaula cadastrada.</p></div>
+    <div class="empty"><div class="empty-ico">🎬</div><p>Nenhuma videoaula disponível.</p></div>
     {% endfor %}
   </div>
+
+  {# ── Links úteis ── #}
+  {% if links_uteis %}
+  <div class="panel-section" style="margin-top:32px;">
+    <div class="panel-section-head"><h3>Links úteis</h3></div>
+    {% for lk in links_uteis %}
+    <div class="list-item">
+      <div class="li-main">
+        <div class="li-title">{{ lk.titulo }}</div>
+        <div class="li-sub">{% if lk.disciplina %}{{ lk.disciplina.nome }} · {% endif %}{{ lk.descricao|default:"" }}</div>
+      </div>
+      <div class="li-actions">
+        <a href="{{ lk.url }}" target="_blank" rel="noopener" class="btn btn-sm">Acessar ↗</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

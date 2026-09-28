@@ -4,6 +4,7 @@
 {% block body %}
 <div class="panel-body">
 
+  {# ── Cadastrar videoaula ── #}
   <div class="form-card">
     <div class="panel-section-head"><h3>Nova videoaula</h3></div>
     <form method="post" action="{% url 'gestao_videoaulas' %}">
@@ -39,37 +40,118 @@
     </form>
   </div>
 
+  {# ── Lista de videoaulas ── #}
   <div class="panel-section">
     <div class="panel-section-head"><h3>Videoaulas cadastradas ({{ videoaulas|length }})</h3></div>
     <div class="video-grid">
       {% for v in videoaulas %}
-<div class="tile" style="padding:0;overflow:hidden;">
-  <div class="video-frame"><iframe src="{{ v.embed_url }}" title="{{ v.titulo }}" allowfullscreen loading="lazy"></iframe></div>
-  <div style="padding:12px;">
-    <div class="tile-title" style="font-size:14px;">{{ v.titulo }}</div>
-    <div class="tile-foot"><span class="tag">{{ v.disciplina.nome|default:"Geral" }}</span>
-      {% if not v.ativa %}<span class="tag risk">Inativa</span>{% endif %}</div>
-  </div>
-  <div style="padding:0 12px 12px;">
-    <form method="post" action="{% url 'gestao_videoaulas' %}"
-          onsubmit="return confirm('Remover a videoaula \'{{ v.titulo }}\'?')"
-          style="margin:0;">
-      {% csrf_token %}
-      <input type="hidden" name="acao" value="excluir" />
-      <input type="hidden" name="video_id" value="{{ v.id }}" />
-      <button type="submit" class="btn btn-sm"
-              style="background:#dc2626;color:#fff;border:none;
-                     padding:4px 10px;border-radius:5px;cursor:pointer;
-                     font-size:12px;width:100%;">
-        Remover
-      </button>
-    </form>
-  </div>
-</div>
-{% empty %}
+      <div class="tile" style="padding:0;overflow:hidden;">
+        <div class="video-frame" style="background:#0f172a;display:flex;align-items:center;justify-content:center;min-height:140px;">
+          <div style="text-align:center;padding:20px;">
+            <div style="font-size:36px;margin-bottom:8px;">🎬</div>
+            <div style="color:#94a3b8;font-size:13px;margin-bottom:12px;">{{ v.titulo }}</div>
+            <a href="{{ v.url_youtube }}" target="_blank" rel="noopener"
+               class="btn btn-primary" style="font-size:13px;padding:6px 16px;">
+              ▶ Assistir no YouTube
+            </a>
+          </div>
+        </div>
+        <div style="padding:12px;">
+          <div class="tile-title" style="font-size:14px;">{{ v.titulo }}</div>
+          <div class="tile-foot">
+            <span class="tag">{{ v.disciplina.nome|default:"Geral" }}</span>
+            {% if v.duracao_minutos %}<span class="li-sub">{{ v.duracao_minutos }} min</span>{% endif %}
+            {% if not v.ativa %}<span class="tag risk">Inativa</span>{% endif %}
+          </div>
+        </div>
+        <div style="padding:0 12px 12px;">
+          <form method="post" action="{% url 'gestao_videoaulas' %}"
+                onsubmit="return confirm('Remover a videoaula \'{{ v.titulo }}\'?')"
+                style="margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="excluir" />
+            <input type="hidden" name="video_id" value="{{ v.id }}" />
+            <button type="submit" class="btn btn-sm"
+                    style="background:#dc2626;color:#fff;border:none;
+                           padding:4px 10px;border-radius:5px;cursor:pointer;
+                           font-size:12px;width:100%;">
+              Remover
+            </button>
+          </form>
+        </div>
+      </div>
+      {% empty %}
       <div class="empty"><div class="empty-ico">🎬</div><p>Nenhuma videoaula cadastrada.</p></div>
       {% endfor %}
     </div>
+  </div>
+
+  {# ── Cadastrar link útil ── #}
+  <div class="form-card" style="margin-top:32px;">
+    <div class="panel-section-head"><h3>Novo link útil</h3></div>
+    <form method="post" action="{% url 'gestao_videoaulas' %}">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="salvar_link" />
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Título</label>
+          <input class="form-input" name="link_titulo" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">URL</label>
+          <input class="form-input" name="link_url" placeholder="https://..." required />
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Disciplina</label>
+          <select class="form-input" name="link_disciplina">
+            <option value="">— sem disciplina —</option>
+            {% for d in disciplinas %}<option value="{{ d.id }}">{{ d.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descrição (opcional)</label>
+          <input class="form-input" name="link_descricao" />
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit">Cadastrar link</button>
+    </form>
+  </div>
+
+  {# ── Lista de links úteis ── #}
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Links úteis ({{ links_uteis|length }})</h3></div>
+    {% for lk in links_uteis %}
+    <div class="list-item">
+      <div class="li-main">
+        <div class="li-title">{{ lk.titulo }}</div>
+        <div class="li-sub">
+          {% if lk.disciplina %}{{ lk.disciplina.nome }} · {% endif %}
+          {{ lk.descricao|default:"" }}
+        </div>
+      </div>
+      <div class="li-actions" style="gap:8px;">
+        <a href="{{ lk.url }}" target="_blank" rel="noopener" class="btn btn-sm">
+          Acessar ↗
+        </a>
+        <form method="post" action="{% url 'gestao_videoaulas' %}"
+              onsubmit="return confirm('Remover o link \'{{ lk.titulo }}\'?')"
+              style="margin:0;">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="excluir_link" />
+          <input type="hidden" name="link_id" value="{{ lk.id }}" />
+          <button type="submit" class="btn btn-sm"
+                  style="background:#dc2626;color:#fff;border:none;
+                         padding:4px 10px;border-radius:5px;cursor:pointer;font-size:12px;">
+            Remover
+          </button>
+        </form>
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty"><div class="empty-ico">🔗</div><p>Nenhum link cadastrado.</p></div>
+    {% endfor %}
   </div>
 
 </div>

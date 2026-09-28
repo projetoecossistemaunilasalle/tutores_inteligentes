@@ -85,3 +85,39 @@ class Videoaula(models.Model):
             video_id = self.url_youtube.split("watch?v=")[-1]
             return f"https://www.youtube.com/embed/{video_id}"
         return self.url_youtube
+
+
+class LinkUtil(models.Model):
+    """Link de conteúdo externo cadastrado pelo professor."""
+
+    titulo = models.CharField("Título", max_length=200)
+    url = models.URLField("URL", max_length=500)
+    descricao = models.TextField("Descrição", blank=True)
+
+    disciplina = models.ForeignKey(
+        "app.Disciplina",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="links_uteis",
+        verbose_name="Disciplina",
+    )
+    cadastrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="links_cadastrados",
+        verbose_name="Cadastrado por",
+    )
+
+    ativa = models.BooleanField("Ativo", default=True)
+    criado_em = models.DateTimeField("Criado em", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Link útil"
+        verbose_name_plural = "Links úteis"
+        ordering = ["disciplina", "titulo"]
+
+    def __str__(self):
+        return self.titulo

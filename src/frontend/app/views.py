@@ -32,7 +32,7 @@ from frontend.app.models.progresso import (
 from frontend.app.models.quizzes import (
     Quiz, Questao, Alternativa, TentativaQuiz, RespostaQuiz,
 )
-from frontend.app.models.videoaulas import Videoaula
+from frontend.app.models.videoaulas import Videoaula, LinkUtil
 
 # --- Models do Grupo 1 (sti / app 'banco_dados') — import tolerante ---
 try:
@@ -708,12 +708,16 @@ def videoaulas_aluno(request):
     ctx["videoaulas"] = list(
         Videoaula.objects.filter(ativa=True).select_related("disciplina")
     )
+    ctx["links_uteis"] = list(
+        LinkUtil.objects.filter(ativa=True).select_related("disciplina")
+    )
     return render(request, "aluno/videoaulas.html", ctx)
-
 
 # ══════════════════════════════════════════════════════════════════════
 # PARTE 3 — TELAS DO PROFESSOR
 # ══════════════════════════════════════════════════════════════════════
+
+
 def login_professor(request):
     """URL: /professor/login/"""
     if request.method == "POST":
@@ -845,17 +849,40 @@ def gestao_exercicios(request):
 
 @professor_required
 def gestao_videoaulas(request):
-    """Lista/cadastra videoaulas.  URL: /professor/videoaulas/"""
     if request.method == "POST":
+        acao = request.POST.get("acao")
+
         # --- Excluir videoaula ---
-        if request.POST.get("acao") == "excluir":
+        if acao == "excluir":
             v = Videoaula.objects.filter(
                 id=request.POST.get("video_id")).first()
             if v:
                 v.delete()
                 messages.success(request, "Videoaula removida.")
-                return redirect("gestao_videoaulas")
-        # --- fim do bloco de exclusão ---
+            return redirect("gestao_videoaulas")
+
+        # --- Excluir link ---
+        if acao == "excluir_link":
+            lk = LinkUtil.objects.filter(
+                id=request.POST.get("link_id")).first()
+            if lk:
+                lk.delete()
+                messages.success(request, "Link removido.")
+            return redirect("gestao_videoaulas")
+
+        # --- Cadastrar link ---
+        if acao == "salvar_link":
+            did = request.POST.get("link_disciplina")
+            LinkUtil.objects.create(
+                titulo=request.POST.get("link_titulo", "").strip(),
+                url=request.POST.get("link_url", "").strip(),
+                descricao=request.POST.get("link_descricao", "").strip(),
+                disciplina=Disciplina.objects.filter(
+                    id=did).first() if did else None,
+                cadastrado_por=request.user,
+            )
+            messages.success(request, "Link cadastrado.")
+            return redirect("gestao_videoaulas")
 
         # --- Criar videoaula ---
         dur = request.POST.get("duracao_minutos") or 0
@@ -876,6 +903,7 @@ def gestao_videoaulas(request):
     ctx.update({
         "videoaulas": list(Videoaula.objects.select_related("disciplina")),
         "disciplinas": list(Disciplina.objects.filter(ativa=True)),
+        "links_uteis": list(LinkUtil.objects.select_related("disciplina")),
     })
     return render(request, "professor/videoaulas.html", ctx)
 
