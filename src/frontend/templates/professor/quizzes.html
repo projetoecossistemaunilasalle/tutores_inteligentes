@@ -10,14 +10,6 @@
       {% csrf_token %}
       <input type="hidden" name="acao" value="criar_quiz" />
       <div class="form-group">
-        <label class="form-label">Título</label>
-        <input class="form-input" name="titulo" required placeholder="Ex: Exercícios sobre Variáveis" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descrição</label>
-        <textarea class="form-input" name="descricao" rows="2" placeholder="Breve descrição do conjunto"></textarea>
-      </div>
-      <div class="form-group">
         <label class="form-label">Disciplina</label>
         <select class="form-input" name="disciplina">
           <option value="">— sem disciplina —</option>
@@ -25,6 +17,14 @@
           <option value="{{ d.id }}">{{ d.nome }}</option>
           {% endfor %}
         </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Título</label>
+        <input class="form-input" name="titulo" required placeholder="Ex: Exercícios sobre Variáveis" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea class="form-input" name="descricao" rows="2" placeholder="Breve descrição do conjunto"></textarea>
       </div>
       <button class="btn btn-primary" type="submit">Salvar conjunto</button>
     </form>
