@@ -15,6 +15,97 @@
     <div class="stat-card"><div class="stat-value" style="font-size:18px;">{{ perfil.estilo_aprendizado|default:"—" }}</div><div class="stat-label">Estilo de aprendizado</div></div>
     <div class="stat-card"><div class="stat-value" style="font-size:18px;">{{ perfil.estado_emocional|default:"—" }}</div><div class="stat-label">Estado emocional</div></div>
     <div class="stat-card"><div class="stat-value">{{ interacoes|length }}</div><div class="stat-label">Interações</div></div>
+    <div class="stat-card"><div class="stat-value">{% if exercicios_feitos %}{{ media_exercicios|floatformat:1 }}{% else %}—{% endif %}</div><div class="stat-label">Média nos exercícios ({{ exercicios_feitos }} feitos)</div></div>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Evolução das notas</h3></div>
+    {% if evolucao.notas %}
+    <div style="position:relative;height:220px;"><canvas id="graficoEvolucao"></canvas></div>
+    {% else %}
+    <div class="field-hint">O gráfico aparece quando o aluno responder exercícios.</div>
+    {% endif %}
+  </div>
+
+  {{ evolucao|json_script:"dados-evolucao" }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <script>
+  (function () {
+    var canvas = document.getElementById("graficoEvolucao");
+    if (!canvas || typeof Chart === "undefined") return;
+    var ev = JSON.parse(document.getElementById("dados-evolucao").textContent);
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: ev.rotulos,
+        datasets: [{
+          label: "Nota",
+          data: ev.notas,
+          borderColor: "#1570ef",
+          backgroundColor: "#1570ef",
+          tension: 0.2,
+          pointRadius: 5
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: { y: { min: 0, max: 10, ticks: { stepSize: 2 } } },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { title: function (itens) {
+            var i = itens[0].dataIndex;
+            return ev.temas[i] + " (" + ev.rotulos[i] + ")";
+          } } }
+        }
+      }
+    });
+  })();
+  </script>
+
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Exercícios de fixação</h3></div>
+    {% if exercicios %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Tema</th><th>Origem</th><th>Tentativas</th><th>Melhor nota</th><th>Última nota</th></tr></thead>
+        <tbody>
+        {% for e in exercicios %}
+          <tr>
+            <td class="name-cell">{{ e.titulo }}</td>
+            <td><span class="tag">{{ e.origem }}</span></td>
+            <td>{{ e.tentativas }}</td>
+            <td>{{ e.melhor_nota|floatformat:1 }}</td>
+            <td>{{ e.ultima_nota|floatformat:1 }}</td>
+          </tr>
+          {% if e.erros %}
+          <tr>
+            <td colspan="5">
+              <details>
+                <summary style="cursor:pointer;color:#b42318;">Ver erros da última tentativa ({{ e.erros|length }})</summary>
+                {% for item in e.erros %}
+                <div style="margin:10px 0 14px;">
+                  <div style="font-weight:600;white-space:pre-wrap;">{{ item.enunciado }}</div>
+                  <ol type="A" style="margin:6px 0 0 18px;">
+                    {% for alt in item.alternativas %}
+                    <li style="{% if alt.correta %}color:#067647;font-weight:600;{% elif alt.marcada %}color:#b42318;text-decoration:line-through;{% endif %}">
+                      {{ alt.texto }}{% if alt.correta %} ✔ correta{% elif alt.marcada %} ✘ resposta do aluno{% endif %}
+                    </li>
+                    {% endfor %}
+                  </ol>
+                  {% if item.explicacao %}<div class="field-hint" style="margin-top:4px;">Justificativa: {{ item.explicacao }}</div>{% endif %}
+                </div>
+                {% endfor %}
+              </details>
+            </td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="field-hint">Este aluno ainda não respondeu exercícios.</div>
+    {% endif %}
   </div>
 
   <div class="panel-section">

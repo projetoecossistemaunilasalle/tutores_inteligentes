@@ -1028,6 +1028,67 @@ def _resumo_exercicios(usuario):
     return len(notas), round(sum(notas) / len(notas), 1)
 
 
+def _dados_graficos_turma(alunos):
+    """Numeros dos graficos do painel da turma."""
+    import re
+    from django.db.models import Count
+
+    # 1) Alunos por faixa de media
+    faixas = {"Abaixo de 5": 0, "De 5 a 7": 0,
+              "7 ou mais": 0, "Sem exercícios": 0}
+    for a in alunos:
+        m = getattr(a, "media_exercicios", None)
+        if m is None:
+            faixas["Sem exercícios"] += 1
+        elif m < 5:
+            faixas["Abaixo de 5"] += 1
+        elif m < 7:
+            faixas["De 5 a 7"] += 1
+        else:
+            faixas["7 ou mais"] += 1
+
+    # 2) Questoes mais erradas pela turma (top 5)
+    erradas = (
+        RespostaQuiz.objects
+        .filter(correta=False, tentativa__concluido_em__isnull=False)
+        .values("questao__enunciado")
+        .annotate(erros=Count("id"))
+        .order_by("-erros")[:5]
+    )
+    questoes = []
+    for q in erradas:
+        linhas = [l.strip() for l in (q["questao__enunciado"]
+                                      or "").splitlines() if l.strip()]
+        num = re.search(r"Quest[aã]o\s+(\d+)", linhas[0],
+                        re.IGNORECASE) if linhas else None
+        if num and len(linhas) > 1:
+            prefixo, inicio = f"Q{num.group(1)} · ", linhas[1]
+        else:
+            prefixo, inicio = "", (linhas[0] if linhas else "Questão")
+        questoes.append({
+            "rotulo": prefixo + inicio[:45] + ("..." if len(inicio) > 45 else ""),
+            "completo": " ".join(linhas)[:300],
+            "erros": q["erros"],
+        })
+
+    # 3) Temas com mais duvidas no chat (top 5) - grafico adiado (topico vazio)
+    temas = []
+    if STI_OK:
+        for t in (HistoricoInteracoes.objects.values("topico")
+                  .annotate(total=Count("id")).order_by("-total")[:5]):
+            temas.append(
+                {"rotulo": t["topico"] or "Geral", "total": t["total"]})
+
+    return {
+        "faixas": {"rotulos": list(faixas.keys()), "valores": list(faixas.values())},
+        "questoes": {"rotulos": [q["rotulo"] for q in questoes],
+                     "completos": [q["completo"] for q in questoes],
+                     "valores": [q["erros"] for q in questoes]},
+        "temas": {"rotulos": [t["rotulo"] for t in temas],
+                  "valores": [t["total"] for t in temas]},
+    }
+
+
 @professor_required
 def dashboard_professor(request):
     """Metricas gerais da turma.  URL: /professor/dashboard/"""
@@ -1057,6 +1118,7 @@ def dashboard_professor(request):
         "media_turma": round(sum(medias) / len(medias), 1) if medias else None,
         "total_exercicios": Exercicio.objects.filter(ativo=True).count() if STI_OK else 0,
         "total_videoaulas": Videoaula.objects.filter(ativa=True).count(),
+        "graficos": _dados_graficos_turma(alunos),
     })
     return render(request, "professor/dashboard.html", ctx)
 
@@ -1074,8 +1136,9 @@ def detalhe_aluno(request, aluno_id):
     # Um item por exercicio feito (pratica do Tutor ou quiz da professora),
     # do mais recente para o mais antigo.
     exercicios = []
+    evolucao = {"rotulos": [], "notas": [], "temas": []}
     if usuario:
-        tentativas = (
+        tentativas = list(
             TentativaQuiz.objects
             .filter(usuario=usuario, concluido_em__isnull=False)
             .select_related("quiz")
@@ -1099,6 +1162,13 @@ def detalhe_aluno(request, aluno_id):
                 "erros": [i for i in revisao["itens"] if not i["acertou"]],
             })
 
+        # Evolucao: todas as tentativas, da mais antiga para a mais recente
+        for t in reversed(tentativas):
+            evolucao["rotulos"].append(
+                timezone.localtime(t.concluido_em).strftime("%d/%m %H:%M"))
+            evolucao["notas"].append(round(float(t.pontuacao) / 10, 1))
+            evolucao["temas"].append(t.quiz.titulo.replace("Pratica: ", "", 1))
+
     feitos, media = _resumo_exercicios(usuario)
 
     ctx.update({
@@ -1107,6 +1177,7 @@ def detalhe_aluno(request, aluno_id):
         "exercicios": exercicios,
         "exercicios_feitos": feitos,
         "media_exercicios": media,
+        "evolucao": evolucao,
     })
     return render(request, "professor/aluno_detalhe.html", ctx)
 

@@ -20,6 +20,72 @@
     <div class="stat-card"><div class="stat-value">{{ total_videoaulas }}</div><div class="stat-label">Videoaulas</div></div>
   </div>
 
+    <div class="panel-section">
+    <div class="panel-section-head"><h3>Visão geral</h3></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
+      <div>
+        <div class="li-title" style="margin-bottom:8px;">Alunos por faixa de média</div>
+        <div style="position:relative;height:240px;"><canvas id="graficoFaixas"></canvas></div>
+      </div>
+      <div>
+        <div class="li-title" style="margin-bottom:8px;">Questões mais erradas pela turma</div>
+        {% if graficos.questoes.valores %}
+        <div style="position:relative;height:240px;"><canvas id="graficoQuestoes"></canvas></div>
+        {% else %}
+        <div class="field-hint">Ainda não há erros registrados nos exercícios.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {{ graficos.faixas|json_script:"dados-faixas" }}
+  {{ graficos.questoes|json_script:"dados-questoes" }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <script>
+  (function () {
+    if (typeof Chart === "undefined") return;
+    var faixas = JSON.parse(document.getElementById("dados-faixas").textContent);
+    var questoes = JSON.parse(document.getElementById("dados-questoes").textContent);
+
+    new Chart(document.getElementById("graficoFaixas"), {
+      type: "doughnut",
+      data: {
+        labels: faixas.rotulos,
+        datasets: [{
+          data: faixas.valores,
+          backgroundColor: ["#d92d20", "#f79009", "#12b76a", "#98a2b3"],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        cutout: "60%",
+        plugins: { legend: { position: "right" } }
+      }
+    });
+
+    var canvasQ = document.getElementById("graficoQuestoes");
+    if (canvasQ) {
+      new Chart(canvasQ, {
+        type: "bar",
+        data: {
+          labels: questoes.rotulos,
+          datasets: [{ label: "Erros", data: questoes.valores, backgroundColor: "#d92d20", borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: "y",
+          maintainAspectRatio: false,
+          scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { title: function (itens) { return questoes.completos[itens[0].dataIndex]; } } }
+          }
+        }
+      });
+    }
+  })();
+  </script>
+
   <div class="panel-section">
     <div class="panel-section-head"><h3>Alunos</h3></div>
     <div class="table-wrap">
