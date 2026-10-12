@@ -3,82 +3,154 @@
 {% block page_title %}Exercícios de Fixação{% endblock %}
 {% block topbar_extra %}
   <div class="topbar-divider"></div>
-  <div class="topbar-lesson">{{ quiz.titulo|default:"Escolha um conjunto de exercícios" }}</div>
+  <div class="topbar-lesson">{{ quiz.titulo|default:"Minhas práticas e exercícios" }}</div>
 {% endblock %}
 
 {% block body %}
 <div class="panel-body">
 
-  {% if resultado %}
-  <div class="perf-hero" style="margin-bottom:18px;">
-    <div class="perf-block">
-      <div class="perf-block-title">Seu resultado</div>
-      <div class="stat-value">{{ resultado.acertos }}/{{ resultado.total }}</div>
-      <div class="stat-label">{{ resultado.pontuacao }}% de acerto · +{{ resultado.xp_ganho }} pontos</div>
-    </div>
-    {% if resultado.subiu %}
-    <div class="perf-block">
-      <div class="perf-block-title">🎉 Parabéns!</div>
-      <div class="stat-label">Você avançou de nível!</div>
-    </div>
-    {% endif %}
-  </div>
-  <div style="margin-bottom:24px;">
-    <a class="btn btn-primary" href="{% url 'exercicios_aluno' %}">Fazer outro exercício</a>
-    <a class="btn" href="{% url 'chat_aluno' %}">Voltar ao Tutor IA</a>
-  </div>
-  {% endif %}
+{% if quiz %}
+  {# ================= UM EXERCÍCIO ABERTO ================= #}
 
-  {% if not quiz %}
-  <p style="color:var(--muted);font-size:14px;margin-bottom:16px;">
-    Escolha um conjunto de exercícios para testar seu entendimento.
-    Cada questão vale 10 pontos.
-  </p>
-  <div class="cards-grid">
-    {% for q in quizzes %}
-    <a class="tile" href="?quiz={{ q.id }}">
-      <div class="tile-title">{{ q.titulo }}</div>
-      <div class="tile-desc">{{ q.descricao|default:"Exercícios de fixação." }}</div>
-      <div class="tile-foot">
-        <span class="tag">{{ q.questoes.count }} questão(ões)</span>
+  {% if revisao %}
+    {# ---------- Correção (depois de responder, ou "Ver correção") ---------- #}
+    <div class="perf-hero" style="margin-bottom:18px;">
+      <div class="perf-block">
+        <div class="perf-block-title">{% if resultado %}Seu resultado{% else %}Sua melhor nota{% endif %}</div>
+        <div class="stat-value">{{ revisao.nota|floatformat:1 }}</div>
+        <div class="stat-label">{{ revisao.acertos }} de {{ revisao.total }} questões certas{% if resultado %} · +{{ resultado.xp_ganho }} pontos{% endif %}</div>
       </div>
-    </a>
-    {% empty %}
-    <div class="empty">
-      <div class="empty-ico">📝</div>
-      <p>Nenhum exercício disponível ainda.<br>O professor irá cadastrar em breve.</p>
+      {% if resultado.subiu %}
+      <div class="perf-block">
+        <div class="perf-block-title">🎉 Parabéns!</div>
+        <div class="stat-label">Você avançou de nível!</div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% for item in revisao.itens %}
+    <div class="quiz-q">
+      <div class="quiz-q-num">Questão {{ forloop.counter }} · {% if item.acertou %}✅ Acertou{% else %}❌ Errou{% endif %}</div>
+      <div class="quiz-q-text" style="white-space:pre-wrap;">{{ item.enunciado }}</div>
+      {% for alt in item.alternativas %}
+      <div style="padding:6px 10px;margin:4px 0;border-radius:6px;border:1px solid var(--border2);
+                  {% if alt.correta %}background:rgba(0,200,100,0.12);{% elif alt.marcada %}background:rgba(220,38,38,0.10);{% endif %}">
+        <strong>{{ alt.letra }})</strong> {{ alt.texto }}
+        {% if alt.marcada %}<span style="font-size:12px;color:var(--muted);"> · sua resposta</span>{% endif %}
+        {% if alt.correta %}<span style="font-size:12px;color:var(--muted);"> · correta</span>{% endif %}
+      </div>
+      {% endfor %}
+      {% if item.explicacao %}
+      <div style="margin-top:8px;font-size:13.5px;"><strong>Justificativa:</strong> {{ item.explicacao }}</div>
+      {% endif %}
     </div>
     {% endfor %}
-  </div>
+
+    <div style="margin:18px 0 24px;">
+      <a class="btn btn-primary" href="?quiz={{ quiz.id }}">Refazer</a>
+      <a class="btn" href="{% url 'exercicios_aluno' %}">Voltar à lista</a>
+      <a class="btn" href="{% url 'chat_aluno' %}">Voltar ao Tutor IA</a>
+    </div>
 
   {% else %}
-  {% if not resultado %}
-  <form method="post" action="?quiz={{ quiz.id }}">
-    {% csrf_token %}
-    {% for questao in questoes %}
-    <div class="quiz-q">
-      <div class="quiz-q-num">Questão {{ forloop.counter }}</div>
-      <div class="quiz-q-text">{{ questao.enunciado }}</div>
-      {% for alt in questao.alternativas.all %}
-      <label class="quiz-alt">
-        <input type="radio" name="q_{{ questao.id }}" value="{{ alt.id }}" required />
-        <span>{{ alt.texto }}</span>
-      </label>
+    {# ---------- Responder / Refazer ---------- #}
+    <form method="post" action="?quiz={{ quiz.id }}">
+      {% csrf_token %}
+      {% for questao in questoes %}
+      <div class="quiz-q">
+        <div class="quiz-q-num">Questão {{ forloop.counter }}</div>
+        <div class="quiz-q-text" style="white-space:pre-wrap;">{{ questao.enunciado }}</div>
+        <ol type="A" style="margin:8px 0 0;padding-left:22px;">
+          {% for alt in questao.alternativas.all %}
+          <li style="margin:4px 0;">
+            <label class="quiz-alt" style="display:inline-flex;gap:8px;align-items:flex-start;">
+              <input type="radio" name="q_{{ questao.id }}" value="{{ alt.id }}" required />
+              <span>{{ alt.texto }}</span>
+            </label>
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% empty %}
+      <div class="empty">
+        <div class="empty-ico">📝</div>
+        <p>Este conjunto ainda não tem questões cadastradas.</p>
+      </div>
       {% endfor %}
+      {% if questoes %}
+      <button class="btn btn-primary" type="submit">Enviar respostas</button>
+      <a class="btn" href="{% url 'exercicios_aluno' %}">Voltar</a>
+      {% endif %}
+    </form>
+  {% endif %}
+
+{% else %}
+  {# ================= LISTA ================= #}
+
+  {# ---------- Minhas práticas do Tutor ---------- #}
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Minhas práticas do Tutor</h3></div>
+    {% for p in praticas %}
+    <div class="list-item" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="li-main">
+        <div class="li-title">{{ p.tema }}</div>
+        <div class="li-sub">
+          {% if p.melhor_nota is None %}
+            <span class="tag">Pendente</span>
+          {% else %}
+            <span class="tag">Melhor nota {{ p.melhor_nota|floatformat:1 }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        {% if p.melhor_nota is None %}
+          <a class="btn btn-primary" href="?quiz={{ p.id }}">Responder</a>
+        {% else %}
+          <a class="btn btn-primary" href="?quiz={{ p.id }}&ver=correcao">Ver correção</a>
+          <a class="btn" href="?quiz={{ p.id }}">Refazer</a>
+        {% endif %}
+        <form method="post" action="{% url 'exercicios_aluno' %}" style="margin:0;"
+              onsubmit="return confirm('Excluir esta prática da sua lista?')">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="excluir_pratica" />
+          <input type="hidden" name="quiz_id" value="{{ p.id }}" />
+          <button type="submit"
+                  style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;">
+            Excluir
+          </button>
+        </form>
+      </div>
     </div>
     {% empty %}
     <div class="empty">
-      <div class="empty-ico">📝</div>
-      <p>Este conjunto ainda não tem questões cadastradas.</p>
+      <div class="empty-ico">💬</div>
+      <p>Quando o Tutor oferecer questões no chat e você clicar em <strong>Sim</strong>,<br>elas ficam guardadas aqui para responder ou revisar.</p>
     </div>
     {% endfor %}
-    {% if questoes %}
-    <button class="btn btn-primary" type="submit">Enviar respostas</button>
-    <a class="btn" href="{% url 'exercicios_aluno' %}">Voltar</a>
-    {% endif %}
-  </form>
-  {% endif %}
-  {% endif %}
+  </div>
+
+  {# ---------- Exercícios da professora ---------- #}
+  <div class="panel-section" style="margin-top:24px;">
+    <div class="panel-section-head"><h3>Exercícios da professora</h3></div>
+    <div class="cards-grid">
+      {% for q in gerais %}
+      <a class="tile" href="?quiz={{ q.id }}">
+        <div class="tile-title">{{ q.titulo }}</div>
+        <div class="tile-desc">{{ q.descricao|default:"Exercícios de fixação." }}</div>
+        <div class="tile-foot">
+          <span class="tag">{{ q.questoes.count }} questão(ões)</span>
+        </div>
+      </a>
+      {% empty %}
+      <div class="empty">
+        <div class="empty-ico">📝</div>
+        <p>Nenhum exercício da professora disponível ainda.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+{% endif %}
 
 </div>
 {% endblock %}

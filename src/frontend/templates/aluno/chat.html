@@ -34,9 +34,6 @@
   <button class="sug-pill" onclick="sendSuggestion('Explique com um exemplo prático')">📖 Exemplo prático</button>
   <button class="sug-pill" onclick="sendSuggestion('Explique de forma mais simples')">📝 Mais simples</button>
   <button class="sug-pill" onclick="sendSuggestion('Qual é o próximo tema?')">✅ Próximo tema</button>
-  <a href="{% url 'exercicios_aluno' %}" class="sug-pill sug-pill-destaque">
-    🎯 Vamos ver se fui claro? Faça um teste aqui
-  </a>
 </div>
 
 <div class="input-bar">
@@ -85,6 +82,8 @@
 <script>
   window.CHAT_CONFIG = {
     apiUrl: "{% url 'chat_perguntar_aluno' %}",
+    corrigirUrl: "{% url 'corrigir_exercicio_chat' %}",
+    praticaUrl: "{% url 'iniciar_pratica_chat' %}",
     disciplinaId: {{ disciplina.id|default:"null" }},
     csrfToken: "{{ csrf_token }}",
     systemPrompt: "{{ disciplina.prompt_sistema|default:'Você é o Prof.ia, um tutor didático e paciente. Explique com exemplos claros e proponha exercícios progressivos.'|escapejs }}",

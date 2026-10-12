@@ -291,3 +291,199 @@ def reindexar_material(pasta=PASTA_PDFS):
             "ok": False, "total": 0, "arquivos": 0,
             "mensagem": f"Falha na reindexacao: {e}",
         }
+
+
+# ══════════════════════════════════════════════════════════════════════
+# EXERCICIOS DE FIXACAO (PDFs de provas / questoes)
+# Colecao separada "exercicios". NAO interfere na colecao "conteudo".
+# ══════════════════════════════════════════════════════════════════════
+PASTA_EXERCICIOS = os.path.join("data", "exercicios")
+COLECAO_EXERCICIOS = "exercicios"
+
+
+def _limpar_texto_exercicio(texto):
+    """Limpeza leve para provas.
+
+    Nao usa a limpar_texto() do conteudo porque ela descarta linhas
+    curtas, e numa prova as alternativas (ex.: 'a) 10') sao curtas.
+    """
+    if not texto:
+        return ""
+    texto = re.sub(r'\(cid:\d+\)', '', texto)
+    linhas = [re.sub(r'[ \t]+', ' ', l).strip() for l in texto.split('\n')]
+    return '\n'.join(l for l in linhas if l)
+
+
+PADRAO_QUESTAO = re.compile(
+    r'(?=^\s*Quest[aã]o\s+\d+\s*(?:[:.\-–)]|$))',
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _separar_questoes(texto):
+    """Separa a prova em questoes inteiras ('Questao 1:', 'Questao 2:'...).
+
+    Para cada questao separa o que o ALUNO VE (contexto, enunciado e
+    alternativas) do GABARITO e da JUSTIFICATIVA, que ficam escondidos
+    e so sao usados na correcao.
+    """
+    partes = [p.strip() for p in PADRAO_QUESTAO.split(texto) if p.strip()]
+    questoes = []
+    for parte in partes:
+        m_num = re.match(r'Quest[aã]o\s+(\d+)', parte, re.IGNORECASE)
+        if not m_num:
+            continue  # texto antes da 1a questao (cabecalho da prova)
+
+        corpo, gabarito, justificativa = parte, "", ""
+        m_gab = re.search(
+            r'[•\-\s]*(?:Gabarito|Resposta(?:\s+correta)?)\s*:', corpo, re.IGNORECASE)
+        if m_gab:
+            resto = corpo[m_gab.end():]
+            corpo = corpo[:m_gab.start()]
+            m_just = re.search(
+                r'[•\-\s]*Justificativa\s*:', resto, re.IGNORECASE)
+            if m_just:
+                gabarito = resto[:m_just.start()].strip()
+                justificativa = resto[m_just.end():].strip()
+            else:
+                gabarito = resto.strip()
+
+        m_letra = re.search(r'\b([A-Ea-e])\b', gabarito)
+        questoes.append({
+            "numero": int(m_num.group(1)),
+            "texto": corpo.strip(),
+            "gabarito": m_letra.group(1).upper() if m_letra else "",
+            "justificativa": justificativa,
+        })
+    return questoes
+
+
+def reindexar_exercicios(pasta=PASTA_EXERCICIOS):
+    """Reindexa os PDFs de provas na colecao 'exercicios', uma questao
+    por registro. Se o PDF nao tiver o padrao 'Questao N:', usa os
+    pedacos de texto como antes.
+
+    Returns:
+        dict com ok, total, arquivos e mensagem (para o professor).
+    """
+    os.makedirs(pasta, exist_ok=True)
+    arquivos = sorted(
+        f for f in os.listdir(pasta) if f.lower().endswith(".pdf")
+    )
+
+    try:
+        os.makedirs(PASTA_VETORES, exist_ok=True)
+        cliente = chromadb.PersistentClient(path=PASTA_VETORES)
+
+        if not arquivos:
+            try:
+                cliente.delete_collection(COLECAO_EXERCICIOS)
+            except Exception:
+                pass
+            return {
+                "ok": True, "total": 0, "arquivos": 0,
+                "mensagem": "Nenhuma prova cadastrada. O banco de questoes esta vazio.",
+            }
+
+        modelo = SentenceTransformer(MODELO_EMBEDDINGS)
+
+        nome_temp = COLECAO_EXERCICIOS + "_temp"
+        try:
+            cliente.delete_collection(nome_temp)
+        except Exception:
+            pass
+        colecao_temp = cliente.create_collection(
+            nome_temp, metadata={"hnsw:space": "cosine"},
+        )
+
+        total = 0
+        arquivos_ok = 0
+        com_falha = []
+        for arquivo in arquivos:
+            caminho = os.path.join(pasta, arquivo)
+            texto_completo = ""
+            try:
+                with pdfplumber.open(caminho) as pdf:
+                    for pagina in pdf.pages:
+                        t = _limpar_texto_exercicio(
+                            pagina.extract_text() or "")
+                        if t:
+                            texto_completo += "\n" + t
+            except Exception:
+                com_falha.append(arquivo)
+                continue
+
+            if not texto_completo.strip():
+                com_falha.append(arquivo)
+                continue
+
+            questoes = _separar_questoes(texto_completo)
+            if questoes:
+                documentos = [q["texto"] for q in questoes]
+                metadados = [
+                    {
+                        "arquivo": arquivo,
+                        "tipo": "exercicio",
+                        "numero": q["numero"],
+                        "gabarito": q["gabarito"],
+                        "justificativa": q["justificativa"][:2000],
+                    }
+                    for q in questoes
+                ]
+            else:
+                # PDF sem o padrao "Questao N:" - indexa em pedacos
+                documentos = dividir_em_pedacos(texto_completo)
+                metadados = [
+                    {"arquivo": arquivo, "tipo": "exercicio",
+                     "numero": 0, "gabarito": "", "justificativa": ""}
+                    for _ in documentos
+                ]
+
+            if not documentos:
+                com_falha.append(arquivo)
+                continue
+
+            vetores = modelo.encode(
+                [f"passage: {d}" for d in documentos]).tolist()
+            colecao_temp.add(
+                documents=documentos,
+                embeddings=vetores,
+                ids=[f"ex-{arquivo}-{i}" for i in range(len(documentos))],
+                metadatas=metadados,
+            )
+            total += len(documentos)
+            arquivos_ok += 1
+
+        if total == 0:
+            try:
+                cliente.delete_collection(nome_temp)
+            except Exception:
+                pass
+            return {
+                "ok": False, "total": 0, "arquivos": len(arquivos),
+                "mensagem": (
+                    "Nenhuma questao pode ser lida dos PDFs (arquivo "
+                    "escaneado como imagem ou corrompido). O banco de "
+                    "questoes anterior foi mantido."
+                ),
+            }
+
+        try:
+            cliente.delete_collection(COLECAO_EXERCICIOS)
+        except Exception:
+            pass
+        colecao_temp.modify(name=COLECAO_EXERCICIOS)
+
+        mensagem = (
+            f"Banco de questoes atualizado: {arquivos_ok} prova(s), "
+            f"{total} questoes/trechos indexados."
+        )
+        if com_falha:
+            mensagem += " Nao foi possivel ler: " + ", ".join(com_falha) + "."
+        return {"ok": True, "total": total, "arquivos": arquivos_ok, "mensagem": mensagem}
+
+    except Exception as e:
+        return {
+            "ok": False, "total": 0, "arquivos": 0,
+            "mensagem": f"Falha ao indexar as provas: {e}",
+        }

@@ -13,7 +13,10 @@
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-value">{{ total_alunos }}</div><div class="stat-label">Alunos</div></div>
     <div class="stat-card"><div class="stat-value">{{ total_interacoes }}</div><div class="stat-label">Interações com o tutor</div></div>
-    <div class="stat-card"><div class="stat-value">{{ total_exercicios }}</div><div class="stat-label">Exercícios ativos</div></div>
+    <div class="stat-card">
+      <div class="stat-value">{% if media_turma is not None %}{{ media_turma|floatformat:1 }}{% else %}—{% endif %}</div>
+      <div class="stat-label">Média da turma nos exercícios</div>
+    </div>
     <div class="stat-card"><div class="stat-value">{{ total_videoaulas }}</div><div class="stat-label">Videoaulas</div></div>
   </div>
 
@@ -21,7 +24,18 @@
     <div class="panel-section-head"><h3>Alunos</h3></div>
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Aluno</th><th>Nível</th><th>Estado emocional</th><th>Interações</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Nível</th>
+            <th>Estado emocional</th>
+            <th>Interações</th>
+            <th>Exercícios feitos</th>
+            <th>Média</th>
+            <th>Última atividade</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
         {% for a in alunos %}
           <tr>
@@ -29,10 +43,13 @@
             <td><span class="tag">{{ a.get_nivel_proficiencia_display }}</span></td>
             <td>{{ a.estado_emocional|default:"—" }}</td>
             <td>{{ a.num_interacoes }}</td>
+            <td>{{ a.exercicios_feitos }}</td>
+            <td>{% if a.media_exercicios is not None %}{{ a.media_exercicios|floatformat:1 }}{% else %}—{% endif %}</td>
+            <td>{{ a.ultima_atividade|date:"d/m/Y"|default:"—" }}</td>
             <td><a class="btn" href="{% url 'detalhe_aluno' a.id %}">Ver detalhes</a></td>
           </tr>
         {% empty %}
-          <tr><td colspan="5"><div class="empty"><div class="empty-ico">👥</div><p>Nenhum perfil de aluno no banco (Grupo 1).</p></div></td></tr>
+          <tr><td colspan="8"><div class="empty"><div class="empty-ico">👥</div><p>Nenhum perfil de aluno no banco (Grupo 1).</p></div></td></tr>
         {% endfor %}
         </tbody>
       </table>

@@ -3,7 +3,110 @@
 {% block page_title %}Exercícios de Fixação{% endblock %}
 {% block body %}
 <div class="panel-body">
+      {# ===== PROVAS E QUESTOES EM PDF (banco de questoes do tutor) ===== #}
+  {# Mesmo padrao visual do "Material do tutor (PDF)" da Base de conhecimento #}
+  <div class="form-card" style="margin-bottom:20px;">
+    <div class="panel-section-head"><h3>Provas e questões (PDF)</h3></div>
+    <p style="margin:0 0 12px; color:#666; font-size:14px;">
+      Envie um PDF de prova ou lista de questões para formar o banco de questões
+      que o tutor oferece ao aluno. Apos o envio, o sistema reindexa as provas automaticamente.
+      A reindexacao pode levar alguns minutos.
+    </p>
+    <form method="post"
+          action="{% url 'upload_exercicio_pdf' %}"
+          enctype="multipart/form-data"
+          id="form-upload-exercicio"
+          onsubmit="mostrarReindexandoExercicio()">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Arquivo PDF</label>
+        <input class="form-input" type="file" name="exercicio_pdf"
+               accept="application/pdf" required />
+      </div>
+      <button class="btn btn-primary" type="submit" id="btn-upload-exercicio">
+        Enviar e reindexar
+      </button>
+      <div id="reindexando-exercicio" style="display:none; margin-top:14px;">
+        <div style="font-size:14px; color:#666; margin-bottom:6px;">
+          Reindexando as provas, aguarde...
+        </div>
+        <div style="height:8px; background:#e6e6e6; border-radius:4px; overflow:hidden;">
+          <div style="height:100%; width:40%; background:#2563eb;
+                      border-radius:4px; animation: barraCorreExercicio 1.2s infinite;">
+          </div>
+        </div>
+      </div>
+    </form>
 
+    <div style="margin-top:20px;">
+      <div style="font-weight:600; color:#333; margin-bottom:10px;">
+        Provas atuais (PDFs)
+      </div>
+      {% if pdfs_exercicios %}
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        {% for pdf in pdfs_exercicios %}
+        <div style="display:flex; align-items:center; justify-content:space-between;
+                    padding:10px 12px; background:#f7f7f7; border-radius:6px;">
+          <span style="font-size:14px; color:#333;">{{ pdf }}</span>
+          <form method="post"
+                action="{% url 'remover_exercicio_pdf' %}"
+                onsubmit="return confirmarRemocaoExercicio('{{ pdf }}')"
+                style="margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="nome_pdf" value="{{ pdf }}" />
+            <button type="submit"
+                    style="background:#dc2626; color:#fff; border:none;
+                           padding:6px 12px; border-radius:5px; cursor:pointer;
+                           font-size:13px;">
+              Remover
+            </button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="font-size:14px; color:#999;">
+        Nenhuma prova enviada ainda.
+      </div>
+      {% endif %}
+    </div>
+
+    {# --- Quantidade de questoes oferecidas ao aluno por duvida --- #}
+    <div style="margin-top:20px; padding-top:16px; border-top:1px solid #e6e6e6;">
+      <form method="post" action="{% url 'salvar_qtd_exercicios' %}"
+            style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0;">
+        {% csrf_token %}
+        <label class="form-label" style="margin:0;">Questões oferecidas ao aluno por dúvida</label>
+        <select class="form-input" name="quantidade" style="width:auto;">
+          {% for n in "12345" %}
+          <option value="{{ n }}" {% if n == qtd_exercicios %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-primary" type="submit">Salvar</button>
+      </form>
+      <p style="margin:8px 0 0; color:#666; font-size:13px;">
+        É o número máximo: se o tema tiver menos questões nas provas, o aluno recebe menos.
+      </p>
+    </div>
+  </div>
+
+  <style>
+    @keyframes barraCorreExercicio {
+      0%   { margin-left: -40%; }
+      100% { margin-left: 100%; }
+    }
+  </style>
+
+  <script>
+    function mostrarReindexandoExercicio() {
+      document.getElementById("btn-upload-exercicio").disabled = true;
+      document.getElementById("btn-upload-exercicio").textContent = "Processando...";
+      document.getElementById("reindexando-exercicio").style.display = "block";
+    }
+    function confirmarRemocaoExercicio(nome) {
+      return confirm("Remover a prova '" + nome + "'? O banco de questoes sera reindexado sem ela.");
+    }
+  </script>
   <div class="form-card">
     <div class="panel-section-head"><h3>Novo conjunto de exercícios</h3></div>
     <form method="post" action="{% url 'gestao_quizzes' %}">

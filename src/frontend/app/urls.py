@@ -20,6 +20,10 @@ urlpatterns = [
     path("aluno/chat/", views.chat_aluno, name="chat_aluno"),
     path("aluno/chat/perguntar/", views.chat_perguntar_aluno,
          name="chat_perguntar_aluno"),
+    path("aluno/chat/iniciar-pratica/", views.iniciar_pratica_chat,
+         name="iniciar_pratica_chat"),
+    path("aluno/chat/corrigir-exercicio/", views.corrigir_exercicio_chat,
+         name="corrigir_exercicio_chat"),
     path("aluno/exercicios/", views.exercicios_aluno, name="exercicios_aluno"),
     path("aluno/historico/", views.historico_aluno, name="historico_aluno"),
     path("aluno/quiz/", views.quiz_aluno, name="quiz_aluno"),
@@ -50,10 +54,17 @@ urlpatterns = [
          name="configuracoes_professor"),
     path("professor/conteudo/upload-material/",
          views.upload_material_rag, name="upload_material_rag"),
-
     path("professor/conteudo/remover-material/",
          views.remover_material_rag, name="remover_material_rag"),
 
+    # Exercicios de Fixacao — provas em PDF (banco de questoes)
+    path("professor/quizzes/upload-pdf/",
+         views.upload_exercicio_pdf, name="upload_exercicio_pdf"),
+    path("professor/quizzes/remover-pdf/",
+         views.remover_exercicio_pdf, name="remover_exercicio_pdf"),
+
+    path("professor/quizzes/quantidade/",
+         views.salvar_qtd_exercicios, name="salvar_qtd_exercicios"),
     # Troca de senha (primeiro acesso do professor) — views nativas do Django
     path(
         "accounts/password_change/",

@@ -17,6 +17,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -108,6 +109,13 @@ def _garantir_perfil_grupo1(user):
         ),
     )
     return perfil
+
+
+def _quizzes_visiveis(usuario):
+    """Quizzes que o aluno pode ver: os gerais do professor + as praticas dele."""
+    return Quiz.objects.filter(ativo=True).filter(
+        Q(aluno__isnull=True) | Q(aluno=usuario)
+    )
 
 
 def conceder_xp(nivel, quantidade):
@@ -486,6 +494,7 @@ def chat_perguntar_aluno(request):
         "resposta": resposta_txt,
         "fontes": resultado.get("fontes", []),
         "usou_rag": resultado.get("usou_rag", False),
+        "exercicios": resultado.get("exercicios", []),
         "xp_ganho": 5,
         "xp_total": nivel.xp_total,
         "nivel": nivel.nivel,
@@ -502,40 +511,256 @@ def chat_perguntar_aluno(request):
     })
 
 
+def _separar_questao_texto(texto):
+    """Separa o texto da questao (vindo da prova) em enunciado e
+    alternativas A) ... E). Mesma regra usada no chat.js."""
+    import re
+    enunciado, alternativas = [], []
+    for linha in (texto or "").split("\n"):
+        m = re.match(r"^\s*([A-Ea-e])\)\s*(.*)$", linha)
+        if m:
+            alternativas.append([m.group(1).upper(), m.group(2).strip()])
+        elif alternativas:
+            alternativas[-1][1] += " " + linha.strip()
+        else:
+            enunciado.append(linha)
+    return "\n".join(enunciado).strip(), alternativas
+
+
 @aluno_required
+@require_POST
+def iniciar_pratica_chat(request):
+    """Cria a pratica do chat como QUIZ PESSOAL do aluno (Quiz.aluno).
+
+    Recebe {"pergunta", "ids": [ids das questoes no ChromaDB], "disciplina_id"}.
+    Copia enunciado, alternativas, gabarito (alternativa correta) e
+    justificativa (Questao.explicacao). Devolve as questoes SEM indicar
+    a correta.  URL: POST /aluno/chat/iniciar-pratica/
+    """
+    from django.db import transaction
+
+    try:
+        dados = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "Requisicao invalida."}, status=400)
+
+    pergunta = (dados.get("pergunta") or "").strip() or "Pratica do chat"
+    ids = [str(i) for i in (dados.get("ids") or [])][:5]
+    if not ids:
+        return JsonResponse({"erro": "Nenhuma questao informada."}, status=400)
+
+    try:
+        import chromadb
+        colecao = chromadb.PersistentClient(
+            path="data/processed/vetores").get_collection("exercicios")
+        achado = colecao.get(ids=ids, include=["documents", "metadatas"])
+    except Exception:
+        return JsonResponse({"erro": "Banco de questoes indisponivel."}, status=503)
+
+    por_id = {
+        i: (doc, meta or {})
+        for i, doc, meta in zip(achado["ids"], achado["documents"], achado["metadatas"])
+    }
+
+    # Monta as questoes na ordem oferecida; pula as sem gabarito
+    montadas = []
+    for qid in ids:
+        if qid not in por_id:
+            continue
+        doc, meta = por_id[qid]
+        gabarito = (meta.get("gabarito") or "").upper()
+        enunciado, alternativas = _separar_questao_texto(doc)
+        if not gabarito or len(alternativas) < 2:
+            continue
+        montadas.append((enunciado, alternativas, gabarito,
+                        meta.get("justificativa", "")))
+
+    if not montadas:
+        return JsonResponse(
+            {"erro": "Nao foi possivel montar as questoes desta pratica."}, status=400)
+
+    did = dados.get("disciplina_id")
+    disciplina = Disciplina.objects.filter(id=did).first() if did else None
+
+    with transaction.atomic():
+        quiz = Quiz.objects.create(
+            titulo=f"Pratica: {pergunta}"[:200],
+            descricao=f"Questoes das provas sobre: {pergunta}",
+            disciplina=disciplina,
+            aluno=request.user,
+            gerado_por_ia=True,
+            total_questoes=len(montadas),
+        )
+        saida = []
+        for ordem, (enunciado, alternativas, gabarito, justificativa) in enumerate(montadas, start=1):
+            questao = Questao.objects.create(
+                quiz=quiz, enunciado=enunciado, tipo="multipla",
+                explicacao=justificativa, ordem=ordem,
+            )
+            alts = []
+            for pos, (letra, texto) in enumerate(alternativas, start=1):
+                alt = Alternativa.objects.create(
+                    questao=questao, texto=texto,
+                    correta=(letra == gabarito), ordem=pos,
+                )
+                alts.append({"id": alt.id, "letra": letra, "texto": texto})
+            saida.append(
+                {"id": questao.id, "enunciado": enunciado, "alternativas": alts})
+
+    return JsonResponse({"quiz_id": quiz.id, "questoes": saida})
+
+
+@aluno_required
+@require_POST
+def corrigir_exercicio_chat(request):
+    """Corrige a pratica do chat e grava a tentativa (TentativaQuiz),
+    igual aos quizzes do professor.
+
+    Recebe {"quiz_id", "respostas": {questao_id: alternativa_id}}.
+    URL: POST /aluno/chat/corrigir-exercicio/
+    """
+    try:
+        dados = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"erro": "Requisicao invalida."}, status=400)
+
+    quiz = Quiz.objects.filter(id=dados.get(
+        "quiz_id"), aluno=request.user).first()
+    if not quiz:
+        return JsonResponse({"erro": "Pratica nao encontrada."}, status=404)
+
+    respostas = {str(k): str(v)
+                 for k, v in (dados.get("respostas") or {}).items()}
+    questoes = list(quiz.questoes.prefetch_related("alternativas"))
+    if not questoes:
+        return JsonResponse({"erro": "Pratica sem questoes."}, status=400)
+    if any(str(q.id) not in respostas for q in questoes):
+        return JsonResponse(
+            {"erro": "Responda todas as questoes antes de corrigir."}, status=400)
+
+    tentativa = TentativaQuiz.objects.create(
+        usuario=request.user, quiz=quiz, total=len(questoes))
+    acertos = 0
+    resultados = []
+    for q in questoes:
+        alts = list(q.alternativas.all())
+        escolhida = next((a for a in alts if str(
+            a.id) == respostas[str(q.id)]), None)
+        certa = next((a for a in alts if a.correta), None)
+        correta = bool(escolhida and escolhida.correta)
+        if correta:
+            acertos += 1
+        RespostaQuiz.objects.create(
+            tentativa=tentativa, questao=q, alternativa=escolhida, correta=correta)
+        resultados.append({
+            "questao_id": q.id,
+            "correta": correta,
+            "alternativa_correta_id": certa.id if certa else None,
+            "letra_correta": chr(64 + certa.ordem) if certa else "",
+            "justificativa": q.explicacao,
+        })
+
+    total = len(questoes)
+    pontuacao = round(acertos * 100 / total, 2)
+    xp = acertos * 10
+    tentativa.acertos = acertos
+    tentativa.pontuacao = pontuacao
+    tentativa.xp_ganho = xp
+    tentativa.concluido_em = timezone.now()
+    tentativa.save()
+
+    nivel = _nivel_do(request.user)
+    subiu = conceder_xp(nivel, xp)
+    atualizar_streak(nivel)
+    nivel.save()
+    verificar_conquistas(request.user, nivel)
+    nivel.save()
+
+    return JsonResponse({
+        "resultados": resultados,
+        "acertos": acertos,
+        "total": total,
+        "nota": round(acertos * 10 / total, 1),
+        "xp_ganho": xp,
+        "xp_total": nivel.xp_total,
+        "nivel": nivel.nivel,
+        "xp_proximo_nivel": nivel.xp_proximo_nivel,
+        "subiu_de_nivel": subiu,
+    })
+
+
+def _melhor_tentativa(usuario, quiz):
+    """Tentativa de maior nota do aluno naquele quiz (empate: a mais recente).
+    As demais tentativas continuam no banco, para o professor."""
+    return (
+        TentativaQuiz.objects
+        .filter(usuario=usuario, quiz=quiz, concluido_em__isnull=False)
+        .order_by("-pontuacao", "-concluido_em")
+        .first()
+    )
+
+
+def _montar_revisao(tentativa):
+    """Monta a correcao de uma tentativa: alternativa marcada x correta
+    e a justificativa (explicacao) de cada questao."""
+    respostas = {r.questao_id: r for r in tentativa.respostas.all()}
+    itens = []
+    for q in tentativa.quiz.questoes.prefetch_related("alternativas"):
+        r = respostas.get(q.id)
+        marcada_id = r.alternativa_id if r else None
+        alternativas = [
+            {
+                "letra": chr(64 + a.ordem) if a.ordem else "",
+                "texto": a.texto,
+                "correta": a.correta,
+                "marcada": a.id == marcada_id,
+            }
+            for a in q.alternativas.all()
+        ]
+        itens.append({
+            "enunciado": q.enunciado,
+            "alternativas": alternativas,
+            "acertou": bool(r and r.correta),
+            "explicacao": q.explicacao,
+        })
+    return {
+        "nota": round(float(tentativa.pontuacao) / 10, 1),
+        "acertos": tentativa.acertos,
+        "total": tentativa.total,
+        "itens": itens,
+    }
+
+
 @aluno_required
 def exercicios_aluno(request):
-    """Exercicios de fixacao com multipla escolha.
+    """Exercicios de fixacao: praticas pessoais do Tutor + quizzes da professora.
     URL: /aluno/exercicios/"""
     ctx = base_ctx(request, "exercicios")
     usuario = request.user
     nivel = _nivel_do(usuario)
 
-    # Lista todos os quizzes ativos com questoes
-    quizzes = list(
-        Quiz.objects.filter(ativo=True)
-        .prefetch_related("questoes__alternativas")
-    )
-
-    # Filtra so quizzes que tem questoes cadastradas
-    quizzes = [q for q in quizzes if q.questoes.exists()]
+    # --- Excluir uma pratica pessoal (so as do proprio aluno) ---
+    if request.method == "POST" and request.POST.get("acao") == "excluir_pratica":
+        Quiz.objects.filter(id=request.POST.get(
+            "quiz_id"), aluno=usuario).update(ativo=False)
+        messages.success(request, "Pratica excluida.")
+        return redirect("exercicios_aluno")
 
     quiz_id = request.GET.get("quiz")
-    quiz = Quiz.objects.filter(
-        id=quiz_id, ativo=True).first() if quiz_id else None
+    quiz = _quizzes_visiveis(usuario).filter(
+        id=quiz_id).first() if quiz_id else None
     questoes = list(quiz.questoes.prefetch_related(
-        "alternativas").all()) if quiz else []
+        "alternativas")) if quiz else []
 
     resultado = None
+    revisao = None
 
+    # --- Responder / Refazer: grava uma nova tentativa ---
     if request.method == "POST" and quiz:
         acertos = 0
         total = len(questoes)
         tentativa = TentativaQuiz.objects.create(
-            usuario=usuario,
-            quiz=quiz,
-            total=total,
-        )
+            usuario=usuario, quiz=quiz, total=total)
         for questao in questoes:
             alt_id = request.POST.get(f"q_{questao.id}")
             alternativa = questao.alternativas.filter(id=alt_id).first()
@@ -543,10 +768,8 @@ def exercicios_aluno(request):
             if correta:
                 acertos += 1
             RespostaQuiz.objects.create(
-                tentativa=tentativa,
-                questao=questao,
-                alternativa=alternativa,
-                correta=correta,
+                tentativa=tentativa, questao=questao,
+                alternativa=alternativa, correta=correta,
             )
         pontuacao = round((acertos / total) * 100, 2) if total > 0 else 0
         xp = acertos * 10
@@ -560,18 +783,40 @@ def exercicios_aluno(request):
         nivel.save()
         verificar_conquistas(usuario, nivel)
         resultado = {
-            "acertos": acertos,
-            "total": total,
-            "pontuacao": pontuacao,
-            "xp_ganho": xp,
-            "subiu": subiu,
+            "acertos": acertos, "total": total, "pontuacao": pontuacao,
+            "xp_ganho": xp, "subiu": subiu,
         }
+        revisao = _montar_revisao(tentativa)
+
+    # --- Ver correcao: mostra a melhor tentativa ---
+    elif quiz and request.GET.get("ver") == "correcao":
+        melhor = _melhor_tentativa(usuario, quiz)
+        if melhor:
+            revisao = _montar_revisao(melhor)
+
+    # --- Listas da tela ---
+    praticas = []
+    for p in Quiz.objects.filter(aluno=usuario, ativo=True).order_by("-criado_em"):
+        melhor = _melhor_tentativa(usuario, p)
+        p.melhor_nota = round(float(melhor.pontuacao) /
+                              10, 1) if melhor else None
+        p.tema = p.titulo.replace("Pratica: ", "", 1)
+        praticas.append(p)
+
+    gerais = [
+        q for q in Quiz.objects.filter(ativo=True, aluno__isnull=True)
+        .prefetch_related("questoes")
+        if q.questoes.exists()
+    ]
 
     ctx.update({
-        "quizzes": quizzes,
+        "praticas": praticas,
+        "gerais": gerais,
+        "quizzes": praticas + gerais,   # mantido para a tela atual ate a Atividade 2
         "quiz": quiz,
         "questoes": questoes,
         "resultado": resultado,
+        "revisao": revisao,
     })
     return render(request, "aluno/exercicios.html", ctx)
 
@@ -595,7 +840,8 @@ def quiz_aluno(request):
     """Carrega questoes/alternativas e grava a tentativa.  URL: /aluno/quiz/"""
     ctx = base_ctx(request, "quiz")
     qid = request.GET.get("quiz")
-    quiz = Quiz.objects.filter(id=qid, ativo=True).first() if qid else None
+    quiz = _quizzes_visiveis(request.user).filter(
+        id=qid).first() if qid else None if qid else None
 
     if quiz and request.method == "POST":
         questoes = list(quiz.questoes.prefetch_related("alternativas"))
@@ -640,7 +886,7 @@ def quiz_aluno(request):
             quiz.questoes.prefetch_related("alternativas"))})
     else:
         ctx.update({"quiz": None, "quizzes": list(
-            Quiz.objects.filter(ativo=True))})
+            _quizzes_visiveis(request.user))})
     return render(request, "aluno/quiz.html", ctx)
 
 
@@ -755,21 +1001,60 @@ def senha_alterada(request):
     return redirect("dashboard_professor")
 
 
+def _usuario_do_perfil(perfil):
+    """Usuario (telas) correspondente ao PerfilAluno (STI)."""
+    return Usuario.objects.filter(
+        Q(identificador_aluno=perfil.identificador) | Q(
+            username=perfil.identificador),
+        papel="aluno",
+    ).first()
+
+
+def _resumo_exercicios(usuario):
+    """Por exercicio, a melhor nota do aluno (mesmo criterio que ele ve).
+    Retorna (exercicios_feitos, media de 0 a 10 ou None)."""
+    if usuario is None:
+        return 0, None
+    from django.db.models import Max
+    melhores = (
+        TentativaQuiz.objects
+        .filter(usuario=usuario, concluido_em__isnull=False)
+        .values("quiz_id")
+        .annotate(melhor=Max("pontuacao"))
+    )
+    notas = [float(m["melhor"]) / 10 for m in melhores]
+    if not notas:
+        return 0, None
+    return len(notas), round(sum(notas) / len(notas), 1)
+
+
 @professor_required
 def dashboard_professor(request):
     """Metricas gerais da turma.  URL: /professor/dashboard/"""
     ctx = base_ctx(request, "dashboard")
     alunos = []
     total_interacoes = 0
+    medias = []
     if STI_OK:
         alunos = list(PerfilAluno.objects.all())
         for a in alunos:
             a.num_interacoes = a.interacoes.count()
             total_interacoes += a.num_interacoes
+            usuario = _usuario_do_perfil(a)
+            a.exercicios_feitos, a.media_exercicios = _resumo_exercicios(
+                usuario)
+            a.ultima_atividade = (
+                NivelUsuario.objects.filter(usuario=usuario)
+                .values_list("ultima_atividade", flat=True).first()
+                if usuario else None
+            )
+            if a.media_exercicios is not None:
+                medias.append(a.media_exercicios)
     ctx.update({
         "alunos": alunos,
         "total_alunos": len(alunos),
         "total_interacoes": total_interacoes,
+        "media_turma": round(sum(medias) / len(medias), 1) if medias else None,
         "total_exercicios": Exercicio.objects.filter(ativo=True).count() if STI_OK else 0,
         "total_videoaulas": Videoaula.objects.filter(ativa=True).count(),
     })
@@ -778,14 +1063,51 @@ def dashboard_professor(request):
 
 @professor_required
 def detalhe_aluno(request, aluno_id):
-    """Perfil, nivel e historico do aluno.  URL: /professor/aluno/<id>/"""
+    """Perfil, historico e exercicios do aluno.  URL: /professor/aluno/<id>/"""
     ctx = base_ctx(request, "dashboard")
     if not STI_OK:
         messages.error(request, "Modulo do aluno (Grupo 1) indisponivel.")
         return redirect("dashboard_professor")
     perfil = get_object_or_404(PerfilAluno, id=aluno_id)
-    ctx.update({"perfil": perfil, "interacoes": list(
-        perfil.interacoes.all()[:30])})
+    usuario = _usuario_do_perfil(perfil)
+
+    # Um item por exercicio feito (pratica do Tutor ou quiz da professora),
+    # do mais recente para o mais antigo.
+    exercicios = []
+    if usuario:
+        tentativas = (
+            TentativaQuiz.objects
+            .filter(usuario=usuario, concluido_em__isnull=False)
+            .select_related("quiz")
+            .order_by("-concluido_em")
+        )
+        por_quiz = {}
+        for t in tentativas:
+            por_quiz.setdefault(t.quiz_id, []).append(
+                t)   # mais recente primeiro
+        for lista in por_quiz.values():
+            ultima = lista[0]
+            melhor = max(lista, key=lambda t: (t.pontuacao, t.concluido_em))
+            quiz = ultima.quiz
+            revisao = _montar_revisao(ultima)
+            exercicios.append({
+                "titulo": quiz.titulo.replace("Pratica: ", "", 1),
+                "origem": "Prática do Tutor" if quiz.aluno_id else "Exercício da professora",
+                "tentativas": len(lista),
+                "melhor_nota": round(float(melhor.pontuacao) / 10, 1),
+                "ultima_nota": revisao["nota"],
+                "erros": [i for i in revisao["itens"] if not i["acertou"]],
+            })
+
+    feitos, media = _resumo_exercicios(usuario)
+
+    ctx.update({
+        "perfil": perfil,
+        "interacoes": list(perfil.interacoes.all()[:30]),
+        "exercicios": exercicios,
+        "exercicios_feitos": feitos,
+        "media_exercicios": media,
+    })
     return render(request, "professor/aluno_detalhe.html", ctx)
 
 
@@ -1131,12 +1453,130 @@ def gestao_quizzes(request):
     ctx = base_ctx(request, "quizzes")
     ctx.update({
         "quizzes": list(
-            Quiz.objects.select_related("disciplina")
+            Quiz.objects.filter(aluno__isnull=True)
+            .select_related("disciplina")
             .prefetch_related("questoes__alternativas")
         ),
         "disciplinas": list(Disciplina.objects.filter(ativa=True)),
+        "pdfs_exercicios": _listar_pdfs_exercicios(),
+        "qtd_exercicios": _qtd_exercicios_str(),
+        "pdfs_exercicios": _listar_pdfs_exercicios(),
+        "qtd_exercicios": _qtd_exercicios_str(),
+
     })
     return render(request, "professor/quizzes.html", ctx)
+
+
+def _listar_pdfs_exercicios():
+    """Lista os PDFs de provas em data/exercicios/ (banco de questoes)."""
+    import os
+    pasta = os.path.join("data", "exercicios")
+    try:
+        return sorted(f for f in os.listdir(pasta) if f.lower().endswith(".pdf"))
+    except FileNotFoundError:
+        return []
+
+
+@professor_required
+@require_POST
+def upload_exercicio_pdf(request):
+    """Recebe um PDF de prova, salva em data/exercicios/ e reindexa
+    o banco de questoes.  URL: /professor/quizzes/upload-pdf/"""
+    import os
+
+    arquivo = request.FILES.get("exercicio_pdf")
+    if not arquivo:
+        messages.error(request, "Nenhum arquivo foi enviado.")
+        return redirect("gestao_quizzes")
+    if not arquivo.name.lower().endswith(".pdf"):
+        messages.error(request, "O arquivo precisa ser um PDF.")
+        return redirect("gestao_quizzes")
+
+    pasta = os.path.join("data", "exercicios")
+    os.makedirs(pasta, exist_ok=True)
+    caminho = os.path.join(pasta, os.path.basename(arquivo.name))
+
+    try:
+        with open(caminho, "wb") as destino:
+            for parte in arquivo.chunks():
+                destino.write(parte)
+    except Exception as e:
+        messages.error(request, f"Falha ao salvar o arquivo: {e}")
+        return redirect("gestao_quizzes")
+
+    try:
+        from sti.modulo_dominio.rag.indexador_pdf import reindexar_exercicios
+        resultado = reindexar_exercicios()
+    except Exception as e:
+        messages.error(
+            request, f"Arquivo salvo, mas houve falha ao indexar: {e}")
+        return redirect("gestao_quizzes")
+
+    if resultado["ok"]:
+        messages.success(request, resultado["mensagem"])
+    else:
+        messages.warning(request, resultado["mensagem"])
+    return redirect("gestao_quizzes")
+
+
+@professor_required
+@require_POST
+def remover_exercicio_pdf(request):
+    """Remove um PDF de prova e reindexa o banco de questoes.
+    URL: /professor/quizzes/remover-pdf/"""
+    import os
+
+    nome = request.POST.get("nome_pdf", "").strip()
+    if not nome or "/" in nome or "\\" in nome or ".." in nome:
+        messages.error(request, "Arquivo invalido.")
+        return redirect("gestao_quizzes")
+
+    caminho = os.path.join("data", "exercicios", nome)
+    if not os.path.exists(caminho):
+        messages.error(request, "Arquivo nao encontrado.")
+        return redirect("gestao_quizzes")
+
+    try:
+        os.remove(caminho)
+    except Exception as e:
+        messages.error(request, f"Falha ao remover: {e}")
+        return redirect("gestao_quizzes")
+
+    try:
+        from sti.modulo_dominio.rag.indexador_pdf import reindexar_exercicios
+        resultado = reindexar_exercicios()
+    except Exception as e:
+        messages.warning(
+            request, f"Arquivo removido, mas falhou ao reindexar: {e}")
+        return redirect("gestao_quizzes")
+
+    messages.success(
+        request, f"Prova '{nome}' removida. {resultado['mensagem']}")
+    return redirect("gestao_quizzes")
+
+
+def _qtd_exercicios_str():
+    """Quantidade de questoes por duvida, para mostrar na tela."""
+    try:
+        from sti.modulo_dominio.rag.buscador import ler_quantidade_exercicios
+        return str(ler_quantidade_exercicios())
+    except Exception:
+        return "2"
+
+
+@professor_required
+@require_POST
+def salvar_qtd_exercicios(request):
+    """Salva quantas questoes o aluno recebe por duvida.
+    URL: /professor/quizzes/quantidade/"""
+    try:
+        from sti.modulo_dominio.rag.buscador import salvar_quantidade_exercicios
+        n = salvar_quantidade_exercicios(request.POST.get("quantidade"))
+        messages.success(
+            request, f"O aluno recebera ate {n} questao(oes) por duvida.")
+    except Exception as e:
+        messages.error(request, f"Nao foi possivel salvar: {e}")
+    return redirect("gestao_quizzes")
 
 
 @professor_required

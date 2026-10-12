@@ -14,6 +14,8 @@ Melhorias:
      conhecimento geral do modelo (Opcao 2).
 """
 
+import json
+import os
 import re
 import chromadb
 from sentence_transformers import SentenceTransformer
@@ -147,3 +149,116 @@ def buscar_com_relevancia(pergunta, quantidade=3):
 def montar_contexto(trechos):
     """Reune os trechos num unico texto para o Groq usar."""
     return "\n\n".join(trechos)
+
+
+# ══════════════════════════════════════════════════════════════════════
+# EXERCICIOS DE FIXACAO — busca no banco de questoes (colecao "exercicios")
+# Nao altera nada da busca do conteudo acima.
+# ══════════════════════════════════════════════════════════════════════
+
+COLECAO_EXERCICIOS = "exercicios"
+ARQUIVO_CONFIG_EXERCICIOS = os.path.join("data", "exercicios", "config.json")
+QTD_PADRAO, QTD_MIN, QTD_MAX = 2, 1, 5
+_modelo_exercicios = None
+
+
+def ler_quantidade_exercicios():
+    """Quantas questoes oferecer por duvida (definido pelo professor).
+    Sem configuracao salva, usa o padrao (2). Sempre entre 1 e 5."""
+    try:
+        with open(ARQUIVO_CONFIG_EXERCICIOS, encoding="utf-8") as f:
+            n = int(json.load(f).get("quantidade", QTD_PADRAO))
+    except Exception:
+        n = QTD_PADRAO
+    return max(QTD_MIN, min(QTD_MAX, n))
+
+
+def salvar_quantidade_exercicios(n):
+    """Salva a quantidade escolhida pelo professor (limitada a 1..5)."""
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        n = QTD_PADRAO
+    n = max(QTD_MIN, min(QTD_MAX, n))
+    os.makedirs(os.path.dirname(ARQUIVO_CONFIG_EXERCICIOS), exist_ok=True)
+    with open(ARQUIVO_CONFIG_EXERCICIOS, "w", encoding="utf-8") as f:
+        json.dump({"quantidade": n}, f)
+    return n
+
+
+def _carregar_modelo_exercicios():
+    """Carrega o modelo de embeddings uma unica vez."""
+    global _modelo_exercicios
+    if _modelo_exercicios is None:
+        _modelo_exercicios = SentenceTransformer(MODELO_EMBEDDINGS)
+    return _modelo_exercicios
+
+
+def buscar_exercicios(pergunta, quantidade=None):
+    """Busca no banco de questoes as questoes ligadas a duvida do aluno.
+
+    quantidade: maximo de questoes. Se nao for informada, usa a
+    quantidade configurada pelo professor (ler_quantidade_exercicios).
+
+    O GABARITO NAO e devolvido aqui (fica no servidor, para a correcao).
+
+    Returns:
+        list[dict]: [{"id", "numero", "texto", "arquivo"}]. Vazia se nao
+        houver questao sobre o assunto ou se nenhuma prova foi enviada.
+    """
+    if quantidade is None:
+        quantidade = ler_quantidade_exercicios()
+
+    try:
+        cliente = chromadb.PersistentClient(path=PASTA_VETORES)
+        colecao = cliente.get_collection(COLECAO_EXERCICIOS)
+    except Exception:
+        return []
+
+    total = colecao.count()
+    if total == 0:
+        return []
+
+    pergunta_lower = pergunta.lower()
+    consultas = [f"query: {pergunta}"]
+    chaves = extrair_palavras_chave(pergunta)
+    if chaves.lower() != pergunta_lower:
+        consultas.append(f"query: {chaves}")
+    traducao = _traduzir_dominio(pergunta_lower)
+    if traducao:
+        consultas.append(f"query: {traducao}")
+
+    vetores = _carregar_modelo_exercicios().encode(consultas).tolist()
+    resultado = colecao.query(
+        query_embeddings=vetores,
+        n_results=min(max(5, quantidade * 3), total),
+        include=["documents", "metadatas", "distances"],
+    )
+
+    candidatos = {}
+    for ids, docs, metas, dists in zip(
+        resultado["ids"], resultado["documents"],
+        resultado["metadatas"], resultado["distances"],
+    ):
+        for id_, doc, meta, dist in zip(ids, docs, metas, dists):
+            if id_ not in candidatos or dist < candidatos[id_]["dist"]:
+                meta = meta or {}
+                candidatos[id_] = {
+                    "id": id_,
+                    "numero": meta.get("numero", 0),
+                    "texto": doc,
+                    "arquivo": meta.get("arquivo", ""),
+                    "dist": dist,
+                }
+
+    ordenados = sorted(candidatos.values(), key=lambda c: c["dist"])
+    relevantes = [
+        c for c in ordenados
+        if _tem_conteudo_relevante(pergunta, [c["texto"]])
+    ]
+
+    return [
+        {"id": c["id"], "numero": c["numero"],
+         "texto": c["texto"], "arquivo": c["arquivo"]}
+        for c in relevantes[:quantidade]
+    ]

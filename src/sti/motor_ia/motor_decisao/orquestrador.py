@@ -13,6 +13,11 @@ Ordem de decisao (mais barato -> mais caro):
 responder() e a unica funcao que a Interface (Grupo 2) chama.
 """
 
+from sti.modulo_dominio.rag.buscador import (
+    buscar_com_relevancia,
+    montar_contexto,
+    buscar_exercicios,
+)
 from sti.modulo_aluno.perfil.perfil_aluno import PerfilAluno
 from sti.modulo_aluno.historico.historico_interacoes import (
     HistoricoInteracoes,
@@ -79,10 +84,18 @@ def responder(pergunta_aluno: str, aluno_id: str) -> dict:
         fontes_rag="\n---\n".join(fontes) if fontes else "",
     )
 
+    # 5) Exercicios de fixacao: questoes do banco ligadas a duvida.
+    #    Qualquer falha aqui NAO afeta a resposta ao aluno.
+    try:
+        exercicios = buscar_exercicios(pergunta_aluno)
+    except Exception:
+        exercicios = []
+
     return {
         "resposta": resposta,
         "fontes": fontes,
         "usou_rag": usou_rag,
         "origem": origem,
         "aluno_id": aluno_id,
+        "exercicios": exercicios,
     }

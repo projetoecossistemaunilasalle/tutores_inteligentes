@@ -31,6 +31,17 @@ class Quiz(models.Model):
         verbose_name="Licao",
     )
 
+    # Dono da pratica. Vazio = quiz do professor (geral, para toda a turma).
+    # Preenchido = pratica pessoal gerada no chat, visivel so para este aluno.
+    aluno = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="praticas",
+        verbose_name="Aluno (pratica pessoal)",
+    )
+
     # ------------------------------------------------------------------ #
     # 2) DADOS DO QUIZ                                                     #
     # ------------------------------------------------------------------ #
