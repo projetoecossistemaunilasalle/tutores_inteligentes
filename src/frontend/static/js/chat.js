@@ -348,6 +348,11 @@ async function corrigirQuestoes(msg, pratica, grupo) {
 
 /* ---------- Utilidades ---------- */
 function formatMessage(text) {
+  // Converte o Markdown do tutor (negrito, titulos, listas, codigo) em HTML seguro
+  if (window.marked && window.DOMPurify) {
+    return DOMPurify.sanitize(marked.parse(text || '', { breaks: true, gfm: true }));
+  }
+  // Reserva: formatacao simples, caso as bibliotecas nao carreguem
   return text
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
