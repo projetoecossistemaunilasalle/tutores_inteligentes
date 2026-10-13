@@ -18,10 +18,10 @@
     <div class="stat-card"><div class="stat-value">{% if exercicios_feitos %}{{ media_exercicios|floatformat:1 }}{% else %}—{% endif %}</div><div class="stat-label">Média nos exercícios ({{ exercicios_feitos }} feitos)</div></div>
   </div>
 
-  <div class="panel-section">
+    <div class="panel-section">
     <div class="panel-section-head"><h3>Evolução das notas</h3></div>
     {% if evolucao.notas %}
-    <div style="position:relative;height:220px;"><canvas id="graficoEvolucao"></canvas></div>
+    <div style="position:relative;height:220px;width:80%;"><canvas id="graficoEvolucao"></canvas></div>
     {% else %}
     <div class="field-hint">O gráfico aparece quando o aluno responder exercícios.</div>
     {% endif %}
@@ -34,6 +34,7 @@
     var canvas = document.getElementById("graficoEvolucao");
     if (!canvas || typeof Chart === "undefined") return;
     var ev = JSON.parse(document.getElementById("dados-evolucao").textContent);
+    var eixo = { border: { color: "#000", width: 2 }, ticks: { color: "#000" } };
     new Chart(canvas, {
       type: "line",
       data: {
@@ -41,15 +42,19 @@
         datasets: [{
           label: "Nota",
           data: ev.notas,
-          borderColor: "#1570ef",
-          backgroundColor: "#1570ef",
+          borderColor: "#12b76a",
+          backgroundColor: "#12b76a",
+          borderWidth: 3,
           tension: 0.2,
           pointRadius: 5
         }]
       },
       options: {
         maintainAspectRatio: false,
-        scales: { y: { min: 0, max: 10, ticks: { stepSize: 2 } } },
+        scales: {
+          x: eixo,
+          y: Object.assign({ min: 0, max: 10, ticks: { stepSize: 2, color: "#000" } }, { border: eixo.border })
+        },
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { title: function (itens) {

@@ -31,6 +31,65 @@ from sti.motor_ia.ia_estruturada.motor_regras import (
 )
 from sti.motor_ia.ia_embarcada.llm_nuvem import gerar_resposta
 
+import re
+import difflib
+import unicodedata
+
+# Temas das perguntas e as palavras-chave de cada um (sem acento, minusculas).
+# Para ajustar os temas, basta editar esta lista.
+TEMAS_PALAVRAS = [
+    ("Algoritmos", ["algoritmo", "algoritmos",
+     "fluxograma", "pseudocodigo", "portugol"]),
+    ("Variáveis e tipos", ["variavel", "variaveis", "constante", "constantes", "tipo de dado",
+                           "tipos de dados", "inteiro", "float", "string", "char", "booleano", "atribuicao"]),
+    ("Entrada e saída", ["leia", "escreva", "input", "print", "entrada", "saida", "output",
+                         "exibir", "imprimir", "mostrar"]),
+    ("Operadores", ["operador", "operadores", "aritmetico", "aritmeticos", "logico", "logicos",
+                    "relacional", "relacionais", "expressao", "expressoes"]),
+    ("Condicionais", ["condicional", "condicionais", "if", "else", "elif", "senao", "se entao",
+                      "switch", "escolha caso", "estrutura de decisao"]),
+    ("Repetição", ["laco", "lacos", "loop", "loops", "enquanto", "repita", "for", "while",
+                   "repeticao", "faca enquanto"]),
+    ("Vetores e matrizes", ["vetor", "vetores", "array",
+     "arrays", "lista", "listas", "matriz", "matrizes"]),
+    ("Funções", ["funcao", "funcoes", "procedimento", "procedimentos", "parametro", "parametros",
+                 "retorno", "def", "modular", "modulo", "modulos", "modularizacao"]),
+    ("Ponteiros e memória", ["ponteiro", "ponteiros",
+     "malloc", "free", "memoria", "alocacao"]),
+    ("Registros", ["registro", "registros", "struct", "structs"]),
+    ("Sintaxe", ["indentacao", "sintaxe", "comentario", "comentarios"]),
+    ("Requisitos", ["requisito", "requisitos"]),
+]
+
+
+def _normalizar(texto):
+    """Minusculas e sem acentos, para comparar palavras."""
+    t = unicodedata.normalize("NFKD", (texto or "").lower())
+    return "".join(c for c in t if not unicodedata.combining(c))
+
+
+def _contem(palavra_chave, texto, palavras_texto):
+    """Palavra-chave presente no texto. Palavras com 6+ letras aceitam
+    pequenos erros de digitacao (ex.: 'vraiavel' -> 'variavel')."""
+    if re.search(r"\b" + re.escape(palavra_chave) + r"\b", texto):
+        return True
+    if " " not in palavra_chave and len(palavra_chave) >= 6:
+        return bool(difflib.get_close_matches(palavra_chave, palavras_texto, n=1, cutoff=0.87))
+    return False
+
+
+def classificar_tema(pergunta):
+    """Tema da pergunta pelo maior numero de palavras-chave encontradas.
+    Sem nenhuma palavra-chave, retorna 'Geral'."""
+    texto = _normalizar(pergunta)
+    palavras_texto = re.findall(r"[a-z]+", texto)
+    melhor, pontos_melhor = "Geral", 0
+    for tema, palavras in TEMAS_PALAVRAS:
+        pontos = sum(1 for p in palavras if _contem(p, texto, palavras_texto))
+        if pontos > pontos_melhor:
+            melhor, pontos_melhor = tema, pontos
+    return melhor
+
 
 def responder(pergunta_aluno: str, aluno_id: str) -> dict:
     """Ponto de entrada para a Interface (Grupo 2).
@@ -79,6 +138,7 @@ def responder(pergunta_aluno: str, aluno_id: str) -> dict:
         aluno=perfil,
         pergunta=pergunta_aluno,
         resposta=resposta,
+        topico=classificar_tema(pergunta_aluno),
         origem=origem,
         usou_rag=usou_rag,
         fontes_rag="\n---\n".join(fontes) if fontes else "",

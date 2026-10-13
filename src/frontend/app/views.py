@@ -1071,13 +1071,16 @@ def _dados_graficos_turma(alunos):
             "erros": q["erros"],
         })
 
-    # 3) Temas com mais duvidas no chat (top 5) - grafico adiado (topico vazio)
-    temas = []
+        # 3) Temas com mais duvidas no chat (top 6, sem "Geral")
+    temas, sem_tema = [], 0
     if STI_OK:
-        for t in (HistoricoInteracoes.objects.values("topico")
-                  .annotate(total=Count("id")).order_by("-total")[:5]):
-            temas.append(
-                {"rotulo": t["topico"] or "Geral", "total": t["total"]})
+        contagem = (HistoricoInteracoes.objects.values("topico")
+                    .annotate(total=Count("id")).order_by("-total"))
+        for t in contagem:
+            if not t["topico"] or t["topico"] == "Geral":
+                sem_tema += t["total"]
+            elif len(temas) < 6:
+                temas.append({"rotulo": t["topico"], "total": t["total"]})
 
     return {
         "faixas": {"rotulos": list(faixas.keys()), "valores": list(faixas.values())},
@@ -1085,7 +1088,8 @@ def _dados_graficos_turma(alunos):
                      "completos": [q["completo"] for q in questoes],
                      "valores": [q["erros"] for q in questoes]},
         "temas": {"rotulos": [t["rotulo"] for t in temas],
-                  "valores": [t["total"] for t in temas]},
+                  "valores": [t["total"] for t in temas],
+                  "sem_tema": sem_tema},
     }
 
 

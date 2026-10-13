@@ -20,7 +20,7 @@
     <div class="stat-card"><div class="stat-value">{{ total_videoaulas }}</div><div class="stat-label">Videoaulas</div></div>
   </div>
 
-    <div class="panel-section">
+      <div class="panel-section">
     <div class="panel-section-head"><h3>Visão geral</h3></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
       <div>
@@ -35,17 +35,28 @@
         <div class="field-hint">Ainda não há erros registrados nos exercícios.</div>
         {% endif %}
       </div>
+      <div>
+        <div class="li-title" style="margin-bottom:8px;">Temas com mais dúvidas no chat</div>
+        {% if graficos.temas.valores %}
+        <div style="position:relative;height:240px;"><canvas id="graficoTemas"></canvas></div>
+        {% if graficos.temas.sem_tema %}<div class="field-hint" style="margin-top:4px;">+ {{ graficos.temas.sem_tema }} mensagens sem tema (saudações, sugestões)</div>{% endif %}
+        {% else %}
+        <div class="field-hint">Ainda não há perguntas classificadas.</div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
   {{ graficos.faixas|json_script:"dados-faixas" }}
   {{ graficos.questoes|json_script:"dados-questoes" }}
+  {{ graficos.temas|json_script:"dados-temas" }}
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
   <script>
   (function () {
     if (typeof Chart === "undefined") return;
     var faixas = JSON.parse(document.getElementById("dados-faixas").textContent);
     var questoes = JSON.parse(document.getElementById("dados-questoes").textContent);
+    var temas = JSON.parse(document.getElementById("dados-temas").textContent);
 
     new Chart(document.getElementById("graficoFaixas"), {
       type: "doughnut",
@@ -60,7 +71,7 @@
       options: {
         maintainAspectRatio: false,
         cutout: "60%",
-        plugins: { legend: { position: "right" } }
+        plugins: { legend: { position: "left", align: "start" } }
       }
     });
 
@@ -70,7 +81,8 @@
         type: "bar",
         data: {
           labels: questoes.rotulos,
-          datasets: [{ label: "Erros", data: questoes.valores, backgroundColor: "#d92d20", borderRadius: 4 }]
+          datasets: [{ label: "Erros", data: questoes.valores, backgroundColor: "#d92d20",
+                       borderRadius: 4, maxBarThickness: 28 }]
         },
         options: {
           indexAxis: "y",
@@ -80,6 +92,24 @@
             legend: { display: false },
             tooltip: { callbacks: { title: function (itens) { return questoes.completos[itens[0].dataIndex]; } } }
           }
+        }
+      });
+    }
+
+    var canvasT = document.getElementById("graficoTemas");
+    if (canvasT) {
+      new Chart(canvasT, {
+        type: "bar",
+        data: {
+          labels: temas.rotulos,
+          datasets: [{ label: "Perguntas", data: temas.valores, backgroundColor: "#1570ef",
+                       borderRadius: 4, maxBarThickness: 28 }]
+        },
+        options: {
+          indexAxis: "y",
+          maintainAspectRatio: false,
+          scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+          plugins: { legend: { display: false } }
         }
       });
     }
