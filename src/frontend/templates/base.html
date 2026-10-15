@@ -2,39 +2,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="{{ request.user.tema|default:'claro' }}">
 <head>
-  <style>
-  /* Listas nas respostas formatadas do tutor (chat, historico, detalhe do aluno) */
-  .md-texto ul, .md-texto ol, .bubble ul, .bubble ol { padding-left: 1.6em; margin: 4px 0; }
-  .md-texto li, .bubble li { margin: 2px 0; }
-  .md-texto pre, .bubble pre { overflow-x: auto; }
-
-  /* Menu recolhivel no celular (telas ate 768px). No computador nada muda. */
-  .menu-btn, .menu-fundo { display: none; }
-  @media (max-width: 768px) {
-    .app { grid-template-columns: 1fr !important; }
-    .sidebar {
-      position: fixed !important; top: 0; left: 0; bottom: 0;
-      width: 270px !important; max-width: 85vw; z-index: 1001;
-      transform: translateX(-105%); transition: transform .25s ease; overflow-y: auto;
-    }
-    .app.menu-aberto .sidebar { transform: translateX(0); }
-    .app.menu-aberto .menu-fundo {
-      display: block; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1000;
-    }
-    .menu-btn {
-      display: flex; align-items: center; justify-content: center;
-      position: fixed; top: 10px; left: 10px; z-index: 999;
-      width: 40px; height: 40px; border-radius: 10px; border: 1px solid #d0d5dd;
-      background: #fff; font-size: 20px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.12);
-    }
-    .main { width: 100% !important; min-width: 0 !important; margin-left: 0 !important; }
-    .topbar { padding-left: 60px !important; flex-wrap: wrap; height: auto !important; }
-    .suggestions-row { flex-wrap: nowrap !important; overflow-x: auto; }
-    .sug-pill { flex: 0 0 auto; white-space: nowrap; }
-    .input-hint { display: none; }
-    .list-item .li-main { flex: 1 1 100%; min-width: 0; }
-  }
-</style>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>{% block title %}Prof.ia — Plataforma de Aprendizado{% endblock %}</title>
