@@ -14,6 +14,7 @@ Melhorias:
      conhecimento geral do modelo (Opcao 2).
 """
 
+import unicodedata
 import json
 import os
 import re
@@ -194,6 +195,47 @@ def _carregar_modelo_exercicios():
     return _modelo_exercicios
 
 
+# Inicios de pergunta que indicam duvida introdutoria (sem acento, minusculas)
+PADRAO_INTRODUTORIA = re.compile(
+    r"^\s*(o que (e|sao|significa)|para que serve|defina|definicao|conceito|"
+    r"qual (e )?o (significado|conceito)|explique o que)\b"
+)
+
+
+def _sem_acento(texto):
+    t = unicodedata.normalize("NFKD", (texto or "").lower())
+    return "".join(c for c in t if not unicodedata.combining(c))
+
+
+def _duvida_introdutoria(pergunta):
+    """True se a pergunta e conceitual/introdutoria (ex.: 'o que e variavel?')."""
+    return bool(PADRAO_INTRODUTORIA.search(_sem_acento(pergunta)))
+
+
+def _numero_prova(arquivo):
+    """Nivel da prova pelo nome do arquivo (G1 -> 1, G2 -> 2...).
+    'Recuperacao de G1' conta como nivel 1. Sem numero, vai para o fim (99)."""
+    nome = _sem_acento(arquivo)
+    m = re.search(r"recuperacao de g\s*_?(\d)",
+                  nome) or re.search(r"g\s*_?(\d)", nome)
+    return int(m.group(1)) if m else 99
+
+
+def _relevante_exercicio(pergunta, texto):
+    """A questao trata do assunto da pergunta? Compara pela raiz da palavra,
+    sem acentos (ex.: 'variavel' encontra 'variaveis')."""
+    corpo = _sem_acento(texto)
+    termos = [p for p in _sem_acento(
+        extrair_palavras_chave(pergunta)).split() if len(p) > 2]
+    traducao = _traduzir_dominio(pergunta.lower())
+    termos += [p for p in _sem_acento(traducao).split() if len(p) > 2]
+    for t in termos:
+        raiz = t[:max(4, len(t) - 2)] if len(t) > 5 else t
+        if raiz in corpo:
+            return True
+    return False
+
+
 def buscar_exercicios(pergunta, quantidade=None):
     """Busca no banco de questoes as questoes ligadas a duvida do aluno.
 
@@ -231,7 +273,7 @@ def buscar_exercicios(pergunta, quantidade=None):
     vetores = _carregar_modelo_exercicios().encode(consultas).tolist()
     resultado = colecao.query(
         query_embeddings=vetores,
-        n_results=min(max(5, quantidade * 3), total),
+        n_results=min(max(10, quantidade * 4), total),
         include=["documents", "metadatas", "distances"],
     )
 
@@ -252,10 +294,15 @@ def buscar_exercicios(pergunta, quantidade=None):
                 }
 
     ordenados = sorted(candidatos.values(), key=lambda c: c["dist"])
-    relevantes = [
-        c for c in ordenados
-        if _tem_conteudo_relevante(pergunta, [c["texto"]])
-    ]
+    relevantes = [c for c in ordenados if _relevante_exercicio(
+        pergunta, c["texto"])]
+
+    # Duvida introdutoria: entre as 8 mais parecidas, preferir as provas
+    # de nivel inicial (G1 e sua recuperacao antes da G2).
+    if _duvida_introdutoria(pergunta):
+        topo = sorted(relevantes[:8], key=lambda c: (
+            _numero_prova(c["arquivo"]), c["dist"]))
+        relevantes = topo + relevantes[8:]
 
     return [
         {"id": c["id"], "numero": c["numero"],

@@ -71,7 +71,25 @@
       options: {
         maintainAspectRatio: false,
         cutout: "60%",
-        plugins: { legend: { position: "left", align: "start" } }
+                plugins: {
+          legend: {
+            position: "left",
+            align: "start",
+            labels: {
+              generateLabels: function (chart) {
+                var itens = Chart.overrides.doughnut.plugins.legend.labels.generateLabels(chart);
+                var dados = chart.data.datasets[0].data;
+                var total = dados.reduce(function (a, b) { return a + b; }, 0);
+                return itens.map(function (item, i) {
+                  var n = dados[i];
+                  var pct = total ? Math.round(n * 100 / total) : 0;
+                  item.text += ": " + n + (n === 1 ? " aluno" : " alunos") + " (" + pct + "%)";
+                  return item;
+                });
+              }
+            }
+          }
+        }
       }
     });
 
