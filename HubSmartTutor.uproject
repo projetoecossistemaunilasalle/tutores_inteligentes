@@ -400,6 +400,10 @@
 		{
 			"Name": "SerializationUtils",
 			"Enabled": true
+		},
+		{
+			"Name": "ExtendedBlueprints",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [
