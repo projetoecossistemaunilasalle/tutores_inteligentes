@@ -8,6 +8,22 @@
     <div class="panel-section-head"><h3>Nova pergunta &amp; resposta</h3></div>
     <form method="post" action="{% url 'gestao_qa' %}">
       {% csrf_token %}
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Disciplina</label>
+          <select class="form-input" name="disciplina" id="qa-disciplina">
+            <option value="">— sem disciplina —</option>
+            {% for d in disciplinas %}<option value="{{ d.id }}">{{ d.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Aula</label>
+          <select class="form-input" name="aula" id="qa-aula">
+            <option value="">— sem aula específica —</option>
+            {% for a in aulas %}<option value="{{ a.id }}" data-disciplina="{{ a.disciplina_id }}">{{ a.titulo }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
       <div class="form-group">
         <label class="form-label">Pergunta</label>
         <input class="form-input" name="pergunta" required />
@@ -39,6 +55,7 @@
     <div class="list-item" style="flex-direction:column;align-items:stretch;gap:4px;">
       <div class="li-title">{{ r.pergunta }}</div>
       <div class="tile-desc">{{ r.resposta }}</div>
+      <div class="contexto-tag">📘 {{ r.disciplina.nome|default:"Sem disciplina" }}{% if r.aula %}<span class="dot-sep">·</span> Aula: {{ r.aula.titulo }}{% endif %}</div>
       <div class="li-sub">{% if r.topico %}{{ r.topico.titulo }} · {% endif %}{{ r.palavras_chave }}</div>
     </div>
     {% empty %}
@@ -47,4 +64,22 @@
   </div>
 
 </div>
+<script>
+  (() => {
+    const disciplina = document.getElementById('qa-disciplina');
+    const aula = document.getElementById('qa-aula');
+    if (!disciplina || !aula) return;
+    const opcoes = [...aula.options];
+    const atualizar = () => {
+      const selecionada = disciplina.value;
+      opcoes.forEach((opcao) => {
+        const visivel = !opcao.value || !selecionada || opcao.dataset.disciplina === selecionada;
+        opcao.hidden = !visivel;
+        if (!visivel && opcao.selected) aula.value = '';
+      });
+    };
+    disciplina.addEventListener('change', atualizar);
+    atualizar();
+  })();
+</script>
 {% endblock %}

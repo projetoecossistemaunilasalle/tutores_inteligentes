@@ -10,6 +10,23 @@ from sti.modulo_dominio.base_conhecimento.conteudo_algoritmos import ConteudoAlg
 class RepositorioQA(models.Model):
     """Um par pergunta-resposta validado pelo professor."""
 
+    disciplina = models.ForeignKey(
+        "app.Disciplina",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="registros_qa",
+        verbose_name="Disciplina",
+    )
+    aula = models.ForeignKey(
+        "app.Licao",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="registros_qa",
+        verbose_name="Aula",
+    )
+
     # ------------------------------------------------------------------ #
     # 1) O PAR PERGUNTA / RESPOSTA                                        #
     # ------------------------------------------------------------------ #
