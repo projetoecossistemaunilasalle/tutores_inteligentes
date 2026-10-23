@@ -17,6 +17,7 @@ from frontend.app.models.progresso import (
     Conquista, ConquistaUsuario, Notificacao,
 )
 from frontend.app.models.videoaulas import Videoaula
+from frontend.app.models.exercicios_resp import RespostaExercicio, ArquivoRespostaExercicio
 
 
 # --- Usuarios ---
@@ -25,6 +26,27 @@ class UsuarioAdmin(UserAdmin):
     list_display = ("username", "email", "papel",
                     "primeiro_acesso", "is_active")
     list_filter = ("papel", "primeiro_acesso", "is_active")
+
+    # A UserAdmin padrão do Django só conhece os campos originais do
+    # usuário (username, senha, nome, permissões...). Sem redeclarar os
+    # fieldsets aqui, os campos que criamos (papel, turma, tema etc.)
+    # ficam visíveis apenas na LISTA de usuários — não na tela de edição.
+    fieldsets = UserAdmin.fieldsets + (
+        ("Papel e vínculo (Prof.ia)", {
+            "fields": ("papel", "primeiro_acesso", "identificador_aluno"),
+        }),
+        ("Turma (professor)", {
+            "fields": ("turma_nome", "turma_codigo", "turma_turno"),
+        }),
+        ("Preferências do site", {
+            "fields": ("tema", "avatar_cor", "reduzir_animacoes", "notificacoes_email"),
+        }),
+    )
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        ("Papel e vínculo (Prof.ia)", {
+            "fields": ("papel", "identificador_aluno"),
+        }),
+    )
 
 
 # --- Conteudo ---
@@ -44,6 +66,22 @@ class LicaoAdmin(admin.ModelAdmin):
 class VideoaulaAdmin(admin.ModelAdmin):
     list_display = ("titulo", "disciplina", "licao", "ativa")
     list_filter = ("disciplina",)
+
+
+@admin.register(RespostaExercicio)
+class RespostaExercicioAdmin(admin.ModelAdmin):
+    list_display = ("usuario", "exercicio", "correta", "tentativas", "respondido_em")
+    list_filter = ("correta", "respondido_em")
+    search_fields = ("usuario__username", "resposta", "exercicio__enunciado")
+
+
+@admin.register(ArquivoRespostaExercicio)
+class ArquivoRespostaExercicioAdmin(admin.ModelAdmin):
+    list_display = ("arquivo", "resposta_exercicio", "enviado_em")
+    search_fields = (
+        "resposta_exercicio__usuario__username",
+        "resposta_exercicio__exercicio__enunciado",
+    )
 
 
 # --- Interacao ---

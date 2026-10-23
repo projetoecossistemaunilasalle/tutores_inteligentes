@@ -80,8 +80,8 @@ class Licao(models.Model):
     atualizado_em = models.DateTimeField("Atualizado em", auto_now=True)
 
     class Meta:
-        verbose_name = "Licao"
-        verbose_name_plural = "Licoes"
+        verbose_name = "Aula"
+        verbose_name_plural = "Aulas"
         ordering = ["disciplina", "ordem"]
 
     def __str__(self):

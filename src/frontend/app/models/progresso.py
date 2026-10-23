@@ -24,7 +24,7 @@ class ProgressoLicao(models.Model):
         "app.Licao",
         on_delete=models.CASCADE,
         related_name="progressos",
-        verbose_name="Licao",
+        verbose_name="Aula",
     )
 
     # ------------------------------------------------------------------ #
@@ -55,8 +55,8 @@ class ProgressoLicao(models.Model):
     )
 
     class Meta:
-        verbose_name = "Progresso de Licao"
-        verbose_name_plural = "Progressos de Licoes"
+        verbose_name = "Progresso de Aula"
+        verbose_name_plural = "Progressos de Aulas"
         unique_together = ["usuario", "licao"]
         ordering = ["-atualizado_em"]
 
@@ -120,7 +120,7 @@ class Conquista(models.Model):
         INICIO = "inicio", "Primeiros passos"
         CONSISTENCIA = "consistencia", "Consistência"
         CONVERSAS = "conversas", "Conversas com o tutor"
-        LICOES = "licoes", "Lições"
+        LICOES = "licoes", "Aulas"
         QUIZZES = "quizzes", "Quizzes"
         EXERCICIOS = "exercicios", "Exercícios"
         PROGRESSAO = "progressao", "Nível & XP"

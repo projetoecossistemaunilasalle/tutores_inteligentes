@@ -11,5 +11,5 @@ from sti.modulo_dominio.base_conhecimento.conteudo_algoritmos import (
     ConteudoAlgoritmos,
 )
 from sti.modulo_dominio.repositorio_qa.repositorio import RepositorioQA
-from sti.modulo_dominio.exercicios.exercicio import Exercicio
+from sti.modulo_dominio.exercicios.exercicio import Exercicio, ArquivoExercicio
 from sti.modulo_dominio.exercicios.gabarito import Gabarito

@@ -3,7 +3,10 @@
 {% block page_title %}Quiz{% endblock %}
 {% block topbar_extra %}
   <div class="topbar-divider"></div>
-  <div class="topbar-lesson">{{ quiz.titulo|default:"Selecione um quiz" }}</div>
+  <div class="topbar-lesson">
+    {% if quiz %}{{ quiz.disciplina.nome|default:"" }}{% if quiz.licao %} · {{ quiz.licao.titulo }}{% endif %} — {{ quiz.titulo }}
+    {% else %}Selecione um quiz{% endif %}
+  </div>
 {% endblock %}
 
 {% block body %}
@@ -23,6 +26,10 @@
     <div class="cards-grid">
       {% for q in quizzes %}
       <a class="tile" href="?quiz={{ q.id }}">
+        <div class="contexto-tag">
+          📘 {{ q.disciplina.nome|default:"Sem disciplina" }}
+          {% if q.licao %}<span class="dot-sep">·</span> {{ q.licao.titulo }}{% endif %}
+        </div>
         <div class="tile-title">{{ q.titulo }}</div>
         <div class="tile-desc">{{ q.descricao|default:"Quiz de fixação." }}</div>
         <div class="tile-foot"><span class="tag">{{ q.total_questoes }} questões</span>

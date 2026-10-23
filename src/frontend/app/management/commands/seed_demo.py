@@ -60,7 +60,7 @@ class Command(BaseCommand):
             admin.set_password("admin"); admin.save()
         w("Usuarios: prof.costa / 2024001234 / 2024005678 (senha 123456), admin/admin")
 
-        # ---------------- Disciplina única + Lições ----------------
+        # ---------------- Disciplina única + Aulas ----------------
         NOME_DISCIPLINA = "Algoritmos e Programação"
         disc, _ = Disciplina.objects.get_or_create(
             nome=NOME_DISCIPLINA,
@@ -126,9 +126,9 @@ class Command(BaseCommand):
             ("perguntas10", "Curioso", "Fez 10 perguntas ao tutor.", "🙋", 30, "conversas"),
             ("perguntas50", "Investigador", "Fez 50 perguntas ao tutor.", "🔍", 80, "conversas"),
             ("perguntas100", "Sedento por conhecimento", "Fez 100 perguntas ao tutor.", "📖", 150, "conversas"),
-            # Lições
-            ("primeira_licao", "Primeira vitória", "Concluiu a primeira lição.", "✅", 25, "licoes"),
-            ("maratonista", "Maratonista", "Concluiu todas as lições da matéria.", "🏃", 120, "licoes"),
+            # Aulas
+            ("primeira_licao", "Primeira vitória", "Concluiu a primeira aula.", "✅", 25, "licoes"),
+            ("maratonista", "Maratonista", "Concluiu todas as aulas da matéria.", "🏃", 120, "licoes"),
             # Quizzes
             ("quiz_ace", "Mestre do quiz", "Gabaritou um quiz (100%).", "🧠", 80, "quizzes"),
             ("quiz_veterano", "Veterano dos quizzes", "Completou 5 quizzes.", "🎓", 60, "quizzes"),
@@ -152,7 +152,7 @@ class Command(BaseCommand):
             objs.append(c)
 
         # Roda a verificação REAL de conquistas contra os dados já semeados
-        # (nível, streak, lição concluída etc.) — nada é forçado; só
+        # (nível, streak, aula concluída etc.) — nada é forçado; só
         # desbloqueia o que o aluno já "conquistou" de fato com este estado.
         from frontend.app.views import _nivel_do, verificar_conquistas
         nivel_aluno = _nivel_do(aluno)

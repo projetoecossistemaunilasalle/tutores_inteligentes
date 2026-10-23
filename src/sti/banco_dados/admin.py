@@ -11,7 +11,7 @@ from sti.modulo_dominio.base_conhecimento.conteudo_algoritmos import (
     ConteudoAlgoritmos,
 )
 from sti.modulo_dominio.repositorio_qa.repositorio import RepositorioQA
-from sti.modulo_dominio.exercicios.exercicio import Exercicio
+from sti.modulo_dominio.exercicios.exercicio import Exercicio, ArquivoExercicio
 from sti.modulo_dominio.exercicios.gabarito import Gabarito
 
 
@@ -35,15 +35,15 @@ class HistoricoInteracoesAdmin(admin.ModelAdmin):
 
 @admin.register(ConteudoAlgoritmos)
 class ConteudoAlgoritmosAdmin(admin.ModelAdmin):
-    list_display = ("titulo", "nivel", "ordem", "ativo")
-    list_filter = ("nivel", "ativo")
+    list_display = ("titulo", "disciplina", "aula", "nivel", "ordem", "ativo")
+    list_filter = ("disciplina", "aula", "nivel", "ativo")
     search_fields = ("titulo", "descricao")
 
 
 @admin.register(RepositorioQA)
 class RepositorioQAAdmin(admin.ModelAdmin):
-    list_display = ("topico", "ativo", "atualizado_em")
-    list_filter = ("ativo",)
+    list_display = ("pergunta", "disciplina", "aula", "topico", "ativo", "atualizado_em")
+    list_filter = ("disciplina", "aula", "ativo")
     search_fields = ("pergunta", "resposta")
 
 
@@ -52,6 +52,12 @@ class ExercicioAdmin(admin.ModelAdmin):
     list_display = ("topico", "nivel", "ativo")
     list_filter = ("nivel", "ativo")
     search_fields = ("enunciado",)
+
+
+@admin.register(ArquivoExercicio)
+class ArquivoExercicioAdmin(admin.ModelAdmin):
+    list_display = ("arquivo", "exercicio", "enviado_em")
+    search_fields = ("exercicio__enunciado",)
 
 
 @admin.register(Gabarito)
