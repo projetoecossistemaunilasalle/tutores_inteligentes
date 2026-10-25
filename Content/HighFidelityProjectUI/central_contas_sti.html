@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Central de Contas — STI (Master Admin)</title>
+<style>
+/* ---------- Escala fluida para monitores grandes (sem foco em celulares) ---------- */
+html{font-size:max(16px,min(.9vw,1.6vh))}            /* 1080p ≈ 17px · 1440p ≈ 23px · 4K ≈ 35px · ultrawide limitado pela altura */
+#login,#app{min-width:1100px}
+main>*{max-width:120rem;margin-left:auto;margin-right:auto}
+@media(min-width:2200px){
+  .g4{gap:1.5rem}.g21{grid-template-columns:2.2fr 1fr}
+}
+@media(min-aspect-ratio:21/9){
+  main{padding-left:4vw;padding-right:4vw}
+  .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+}
+:root{
+  color-scheme:dark;
+  --bg:#2b2d32;--bg2:#232529;--panel:#35383e;--panel2:#40444b;
+  --ink:#ececf0;--mute:#a3a8b4;--soft:#4a4e57;--line:#0d0e11;
+  --b1:#c9dbff;--b2:#9dbcff;--brand:#5b8cff;--brand-d:#3d6bff;--b5:#233a85;--brand-l:#25324f;
+  --ok:#6fd48c;--ok-l:#1f3a2a;--warn:#ffcf4d;--warn-l:#443a1c;--bad:#ff7a85;--bad-l:#4a2327;
+  --bd:0.1562rem solid var(--line);
+  --sh:0.3125rem 0.3125rem 0 var(--line);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Inter","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:0.875rem;height:100vh;overflow-x:auto;overflow-y:hidden}
+button{font:inherit;cursor:pointer}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:0.75rem;height:0.75rem}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--panel2);border:0.1562rem solid var(--line);border-radius:0.5rem}
+::selection{background:var(--brand);color:#0d0e11}
+
+/* ---------- Logo ---------- */
+.logo{display:flex;align-items:center;gap:0.75rem}
+.logo-mark{display:inline-grid;place-items:center;width:2.5rem;height:3.125rem;background:var(--b1);border:var(--bd);border-radius:0.5rem;box-shadow:0.1875rem 0.1875rem 0 var(--line);color:#0d0e11;flex:none;padding:0.3125rem}
+.logo-mark svg{width:100%;height:100%;display:block;fill:currentColor}
+.logo-mark.big{width:5.25rem;height:6.625rem;padding:0.625rem;border-radius:0.75rem;box-shadow:0.375rem 0.375rem 0 var(--line)}
+.lt{font-weight:900;font-size:1.1875rem;line-height:1.1;letter-spacing:.02em}
+.lt small{display:block;font-size:0.6562rem;font-weight:800;color:var(--mute);letter-spacing:.09em;text-transform:uppercase;margin-top:0.125rem}
+
+/* ---------- Login ---------- */
+#login{height:100vh;display:grid;grid-template-columns:1.1fr 1fr;background:var(--bg)}
+.login-hero{background-color:var(--brand);background-image:radial-gradient(rgba(13,14,17,.28) 0.1rem,transparent 0.1rem);background-size:1.25rem 1.25rem;color:#0d0e11;padding:3.5rem;display:flex;flex-direction:column;justify-content:space-between;border-right:0.25rem solid var(--line)}
+.hero-logo .lt small{color:rgba(13,14,17,.7)}
+.login-hero h1{font-size:2.625rem;line-height:1.08;max-width:32.5rem;font-weight:900;letter-spacing:-.5px}
+.login-hero h1 mark{background:var(--b1);color:#0d0e11;padding:0 0.5rem;border:var(--bd);box-shadow:0.25rem 0.25rem 0 var(--line);display:inline-block;transform:rotate(-1.2deg)}
+.login-hero p{max-width:28.75rem;margin-top:1.375rem;line-height:1.55;font-weight:600;font-size:0.9375rem}
+.login-hero .tags span{display:inline-block;background:var(--b1);color:#0d0e11;border:var(--bd);box-shadow:0.1875rem 0.1875rem 0 var(--line);padding:0.3125rem 0.75rem;border-radius:0.5rem;margin:0 0.5rem 0.625rem 0;font-size:0.75rem;font-weight:800}
+.login-card{display:flex;align-items:center;justify-content:center;padding:2.5rem;overflow-y:auto}
+.login-box{width:100%;max-width:25.625rem;background:var(--panel);border:var(--bd);border-radius:0.875rem;padding:1.875rem;box-shadow:0.5rem 0.5rem 0 var(--brand)}
+.login-box .logo{margin-bottom:1.375rem}
+.login-box h2{font-size:1.5rem;font-weight:900;margin-bottom:0.375rem}
+.login-box .sub{color:var(--mute);margin-bottom:1.375rem;line-height:1.5}
+.btn-sso{width:100%;padding:0.875rem;border:var(--bd);border-radius:0.625rem;background:var(--brand);color:#0d0e11;font-weight:900;font-size:0.9375rem;display:flex;gap:0.625rem;align-items:center;justify-content:center;box-shadow:0.25rem 0.25rem 0 var(--line);transition:transform .08s,box-shadow .08s}
+.btn-sso:hover{transform:translate(-2px,-2px);box-shadow:0.375rem 0.375rem 0 var(--line);background:var(--b2)}
+.btn-sso:active{transform:translate(0.25rem,0.25rem);box-shadow:0 0 0 var(--line)}
+.sec-note{margin-top:1.125rem;padding:0.6875rem 0.875rem;background:var(--brand-l);border:0.125rem dashed var(--brand);border-radius:0.5rem;color:var(--b1);font-size:0.7812rem;line-height:1.5;font-weight:600}
+.login-state{margin-top:1.25rem;display:none;background:var(--bg2);border:var(--bd);border-radius:0.625rem;padding:0.375rem 0.875rem}
+.login-state.on{display:block}
+.steps{list-style:none}
+.steps li{padding:0.5rem 0;color:var(--mute);display:flex;gap:0.625rem;align-items:center;font-weight:600}
+.steps li.done{color:var(--ok)}
+.steps li.act{color:var(--ink);font-weight:800}
+.spin{width:0.875rem;height:0.875rem;border:0.1875rem solid var(--soft);border-top-color:var(--brand);border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.role-pick{margin-top:1.125rem}
+.role-pick label{font-size:0.6875rem;color:var(--mute);display:block;margin-bottom:0.375rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+
+/* ---------- App shell ---------- */
+#app{height:100vh;display:grid;grid-template-columns:15.625rem 1fr}
+aside{background:var(--bg2);color:#c4c8d2;display:flex;flex-direction:column;padding:1.25rem 0.875rem;border-right:0.25rem solid var(--line)}
+aside .logo{padding:0 0.25rem;margin-bottom:1.5rem;color:var(--ink)}
+.nav button{width:100%;display:flex;gap:0.6875rem;align-items:center;padding:0.625rem 0.75rem;border:0.1562rem solid transparent;background:none;color:inherit;border-radius:0.5625rem;text-align:left;margin-bottom:0.375rem;font-weight:700;transition:transform .08s,box-shadow .08s}
+.nav button:hover{background:var(--panel);border-color:var(--line);color:#fff}
+.nav button.on{background:var(--brand);color:#0d0e11;border-color:var(--line);box-shadow:0.25rem 0.25rem 0 var(--b1);transform:translate(-1px,-1px);font-weight:900}
+.nav .ic{width:1.25rem;height:1.25rem;display:grid;place-items:center;flex:none}
+.nav .ic svg{width:1.25rem;height:1.25rem;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.nav-sec{font-size:0.6562rem;text-transform:uppercase;letter-spacing:.12em;padding:0.875rem 0.25rem 0.5rem;color:var(--mute);font-weight:800}
+.side-foot{margin-top:auto;padding:0.75rem;border:var(--bd);border-radius:0.625rem;background:var(--panel);font-size:0.75rem;color:var(--mute);box-shadow:0.25rem 0.25rem 0 var(--line)}
+.side-foot b{color:var(--ink);display:block;font-size:0.8125rem;font-weight:800}
+.side-foot button{margin-top:0.625rem;background:var(--panel2);border:0.125rem solid var(--line);color:var(--ink);border-radius:0.4375rem;padding:0.3125rem 0.625rem;font-size:0.75rem;font-weight:800;box-shadow:0.125rem 0.125rem 0 var(--line)}
+.side-foot button:hover{background:var(--brand);color:#0d0e11}
+main{overflow-y:auto;padding:1.75rem 2.125rem 3.5rem;background-color:var(--bg);background-image:radial-gradient(#3b3e45 0.0813rem,transparent 0.0813rem);background-size:1.5rem 1.5rem}
+.top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.625rem;gap:1rem}
+.top h1{display:inline-block;font-size:1.625rem;font-weight:900;background:var(--brand);color:#0d0e11;padding:0.1875rem 0.875rem;border:var(--bd);box-shadow:0.3125rem 0.3125rem 0 var(--line);transform:rotate(-.6deg);letter-spacing:-.2px}
+.top p{color:var(--mute);margin-top:0.875rem;font-weight:600}
+.actions{display:flex;gap:0.625rem;flex-wrap:wrap}
+
+/* ---------- Components ---------- */
+.btn{border:var(--bd);background:var(--panel2);color:var(--ink);padding:0.5rem 0.875rem;border-radius:0.5rem;font-weight:800;font-size:0.8125rem;box-shadow:0.1875rem 0.1875rem 0 var(--line);transition:transform .08s,box-shadow .08s,background .08s}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:0.25rem 0.25rem 0 var(--brand);color:var(--ink)}
+.btn:active{transform:translate(0.1875rem,0.1875rem);box-shadow:0 0 0 var(--line)}
+.btn.pri{background:var(--brand);color:#0d0e11}
+.btn.pri:hover{background:var(--b2);color:#0d0e11;box-shadow:0.25rem 0.25rem 0 var(--line)}
+.btn.sm{padding:0.1875rem 0.5625rem;font-size:0.75rem;box-shadow:0.125rem 0.125rem 0 var(--line);border-width:0.125rem}
+.btn.danger{color:var(--bad)}
+.btn.danger:hover{box-shadow:0.25rem 0.25rem 0 var(--bad);color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:0.1875rem 0.1875rem 0 var(--line)}
+.card{background:var(--panel);border:var(--bd);border-radius:0.75rem;padding:1.125rem 1.25rem;box-shadow:var(--sh)}
+.card h3{font-size:0.9375rem;font-weight:900;margin-bottom:0.1875rem}
+.card .hint{color:var(--mute);font-size:0.7812rem;margin-bottom:0.875rem;font-weight:600}
+.grid{display:grid;gap:1.25rem}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g21{grid-template-columns:2fr 1fr}
+.kpi{position:relative;padding-top:1.875rem}
+.kpi:before{content:"";position:absolute;left:0;top:0;right:0;height:0.625rem;background:var(--brand);border-bottom:var(--bd);border-radius:0.5625rem 0.5625rem 0 0}
+.grid>.kpi:nth-child(4n+2):before{background:var(--b1)}
+.grid>.kpi:nth-child(4n+3):before{background:var(--b2)}
+.grid>.kpi:nth-child(4n+4):before{background:var(--brand-d)}
+.kpi .lbl{color:var(--mute);font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.kpi .val{font-size:1.875rem;font-weight:900;margin:0.375rem 0 0.125rem}
+.kpi .delta{font-size:0.75rem;font-weight:700}
+.up{color:var(--ok)}.down{color:var(--bad)}
+.badge{display:inline-block;padding:0.0625rem 0.5625rem;border-radius:0.375rem;font-size:0.7188rem;font-weight:800;border:0.125rem solid var(--line)}
+.b-ok{background:var(--ok-l);color:var(--ok)}
+.b-bad{background:var(--bad-l);color:var(--bad)}
+.b-warn{background:var(--warn-l);color:var(--warn)}
+.b-info{background:var(--brand);color:#0d0e11}
+.b-gray{background:var(--panel2);color:var(--ink)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:0.7188rem;text-transform:uppercase;letter-spacing:.06em;color:#0d0e11;padding:0.6875rem 0.75rem;border-bottom:var(--bd);background:var(--brand);white-space:nowrap;font-weight:900}
+td{padding:0.6875rem 0.75rem;border-bottom:0.0938rem solid var(--soft);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--panel2)}
+.tbl-wrap{overflow:auto;border:var(--bd);border-radius:0.75rem;background:var(--panel);box-shadow:var(--sh)}
+.avatar{width:2.125rem;height:2.125rem;border-radius:0.5rem;background:var(--b1);color:#0d0e11;border:0.125rem solid var(--line);display:inline-grid;place-items:center;font-weight:900;font-size:0.75rem;margin-right:0.625rem;vertical-align:middle;box-shadow:0.125rem 0.125rem 0 var(--line)}
+input,select{font:inherit;padding:0.5rem 0.6875rem;border:var(--bd);border-radius:0.5rem;background:var(--bg2);color:var(--ink);outline:none;font-weight:600}
+input:focus,select:focus{box-shadow:0.1875rem 0.1875rem 0 var(--brand)}
+input[type=range]{accent-color:var(--brand);padding:0;height:1.625rem;border:0;background:none}
+input[type=range]:focus{box-shadow:none}
+.toolbar{display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.toolbar input[type=search]{min-width:16.25rem}
+.tabs{display:flex;gap:0.625rem;margin-bottom:1.125rem;flex-wrap:wrap}
+.tabs button{border:var(--bd);background:var(--panel);color:var(--ink);padding:0.4375rem 1rem;border-radius:0.5rem;font-weight:800;box-shadow:0.1875rem 0.1875rem 0 var(--line);transition:transform .08s,box-shadow .08s}
+.tabs button:hover{transform:translate(-1px,-1px);box-shadow:0.25rem 0.25rem 0 var(--brand)}
+.tabs button.on{background:var(--brand);color:#0d0e11}
+.switch{position:relative;width:2.75rem;height:1.5rem;display:inline-block;vertical-align:middle}
+.switch input{display:none}
+.switch span{position:absolute;inset:0;background:var(--bg2);border:var(--bd);border-radius:0.5rem;cursor:pointer;transition:.15s}
+.switch span:before{content:"";position:absolute;width:0.875rem;height:0.875rem;left:0.1875rem;top:0.125rem;background:var(--mute);border:0.125rem solid var(--line);border-radius:0.25rem;transition:.15s}
+.switch input:checked+span{background:var(--brand)}
+.switch input:checked+span:before{transform:translateX(1.1875rem);background:#fff}
+.bar-row{display:grid;grid-template-columns:9.375rem 1fr 3rem;gap:0.625rem;align-items:center;margin:0.6875rem 0;font-size:0.8125rem;font-weight:600}
+.bar-bg{background:var(--bg2);border:0.125rem solid var(--line);border-radius:0.375rem;height:1rem;overflow:hidden}
+.bar-fill{height:100%;background:var(--brand);border-right:0.125rem solid var(--line)}
+.progress{height:1.125rem;background:var(--bg2);border:var(--bd);border-radius:0.5rem;overflow:hidden}
+.progress div{height:100%;background:repeating-linear-gradient(45deg,var(--brand) 0 0.5rem,var(--brand-d) 0.5rem 1rem);transition:width .3s}
+.log{font-family:Consolas,"Courier New",monospace;font-size:0.75rem;background:#17181b;color:var(--b1);border:var(--bd);border-radius:0.5rem;padding:0.75rem 0.875rem;height:10.625rem;overflow:auto;line-height:1.7}
+.audit li{list-style:none;padding:0.5625rem 0;border-bottom:0.0938rem dashed var(--soft);font-size:0.7812rem;display:flex;gap:0.625rem}
+.audit li:last-child{border:0}
+.audit time{color:#0d0e11;background:var(--b1);border:0.125rem solid var(--line);border-radius:0.3125rem;padding:0 0.375rem;white-space:nowrap;font-weight:800;height:fit-content;font-size:0.7188rem}
+.field{margin-bottom:0.875rem}
+.field label{display:block;font-size:0.6875rem;font-weight:800;color:var(--mute);margin-bottom:0.375rem;text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select{width:100%}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+.dot{width:0.625rem;height:0.625rem;border-radius:0.1875rem;border:0.125rem solid var(--line);display:inline-block;margin-right:0.375rem}
+.empty{padding:1.875rem;text-align:center;color:var(--mute);font-weight:600}
+.chips span{display:inline-block;background:var(--brand-l);color:var(--brand);padding:0.1875rem 0.625rem;border-radius:0.375rem;font-size:0.75rem;margin:0.125rem 0.25rem 0.125rem 0;font-weight:700}
+.dropzone{border:0.1562rem dashed var(--brand);border-radius:0.625rem;padding:1.875rem;text-align:center;color:var(--mute);background:var(--bg2);cursor:pointer;font-weight:600}
+.dropzone:hover{color:var(--b1);background:var(--brand-l)}
+
+/* modal / toast */
+.overlay{position:fixed;inset:0;background:rgba(13,14,17,.7);display:grid;place-items:center;z-index:50}
+.modal{background:var(--panel);border:var(--bd);border-radius:0.875rem;width:min(33.75rem,92vw);padding:1.5rem;max-height:90vh;overflow:auto;box-shadow:0.5rem 0.5rem 0 var(--brand)}
+.modal h3{font-size:1.1875rem;font-weight:900;margin-bottom:1rem}
+.modal .foot{display:flex;justify-content:flex-end;gap:0.625rem;margin-top:1.25rem}
+#toast{position:fixed;right:1.5rem;bottom:1.5rem;background:var(--brand);color:#0d0e11;font-weight:800;border:var(--bd);border-radius:0.625rem;box-shadow:0.3125rem 0.3125rem 0 var(--line);padding:0.75rem 1.125rem;opacity:0;transform:translateY(0.625rem);transition:.25s;z-index:99;pointer-events:none;max-width:23.75rem}
+#toast.on{opacity:1;transform:none}
+.browser-win{--ink:#15161a;--mute:#5b6070;background:#fff;color:#15161a;border-radius:0.625rem;overflow:hidden;width:min(35rem,92vw);border:var(--bd)}
+.browser-bar{background:#dfe3ee;padding:0.5625rem 0.75rem;display:flex;gap:0.625rem;align-items:center;font-size:0.75rem;color:#444;border-bottom:var(--bd)}
+.browser-bar .url{flex:1;background:#fff;border:0.125rem solid var(--line);border-radius:0.875rem;padding:0.1875rem 0.75rem}
+.browser-body{padding:1.875rem;text-align:center}
+.ms{display:grid;grid-template-columns:1fr 1fr;width:2.875rem;margin:0 auto 0.875rem;gap:0.1875rem}
+.ms i{height:1.3125rem;display:block}
+
+@media print{
+  :root{--bg:#fff;--bg2:#fff;--panel:#fff;--panel2:#eee;--ink:#000;--mute:#444;--soft:#999;--line:#000;--brand:#9dbcff;--brand-l:#e8efff}
+  body{overflow:visible;height:auto}
+  main{background:#fff}
+  aside,.top .actions,.toolbar{display:none}
+  #app{display:block}
+  .card,.tbl-wrap,.btn{box-shadow:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="sti-logo" viewBox="298.70548 30.462445 122.79466 180.83711"><path fill="currentColor" d="m 341.97645,210.73956 c 0.11411,-0.308 0.88552,-1.69566 1.71423,-3.08368 1.88546,-3.15799 5.28195,-6.83705 8.21075,-8.89387 1.9827,-1.3924 2.23435,-1.68365 2.14995,-2.48823 -0.27162,-2.5895 1.43152,-5.23316 4.11513,-6.38762 l 1.61374,-0.69421 -1.03398,-1.93994 -1.03398,-1.93994 c -3.71263,0.56547 -8.21438,1.14958 -13.31577,1.71365 l -2.14472,3.09692 c -7.30296,10.54525 -12.71819,15.03292 -19.58586,16.23105 -1.48032,0.25825 -2.75956,0.40148 -2.84275,0.31829 -0.0832,-0.0832 0.42416,-1.12803 1.12745,-2.32185 1.8025,-3.05966 4.56679,-8.25546 4.56679,-8.5838 0,-1.74917 -7.96257,15.21109 -19.63029,14.12669 -1.25166,-0.11633 -2.38446,-0.32021 -2.51732,-0.45307 -0.13286,-0.13287 2.096,-4.43654 4.95302,-9.56372 l 5.19459,-9.32215 c 10.93129,-2.11236 22.44416,-5.69332 33.82134,-11.45608 19.04218,-9.64523 29.61681,-22.52914 31.61451,-38.51844 0.56631,-4.53267 0.311,-6.05516 -0.39561,-2.35913 -1.19658,6.25892 -4.36894,13.28616 -8.43406,18.68264 -7.29632,9.68595 -20.49336,18.81842 -34.16918,23.64539 l -2.8297,0.99876 1.88422,-2.16383 c 2.86716,-3.29265 4.0176,-4.79484 5.94584,-7.76383 1.6477,-2.53704 5.40819,-9.75839 4.1668,-8.00161 -4.89338,6.925 -11.99002,14.48391 -16.63873,17.72258 -3.43011,2.38969 -7.36517,4.21318 -11.1806,5.18104 -1.68679,0.42789 -3.27994,0.77799 -3.54033,0.77799 -0.27071,0 0.32027,-0.85643 1.3801,-2 3.67576,-3.96621 7.20282,-9.23427 10.20252,-15.23859 1.57614,-3.15488 2.43062,-5.22394 1.68493,-4.07995 -6.5389,10.0316 -13.64562,18.16634 -18.34167,20.99487 -2.60706,1.57029 -5.66641,2.54553 -8.01635,2.5554 l -1.96598,0.008 2.15806,-4.08 c 1.18693,-2.244 5.25604,-9.912 9.04246,-17.04 3.78642,-7.128 7.76075,-14.616 8.83183,-16.64 l 1.94743,-3.68 -1.62092,-2.4 c -9.84406,-14.5755 -12.89654,-20.61472 -14.63764,-28.96 -3.49729,-16.762984 1.48506,-33.980621 13.24602,-45.774613 1.93859,-1.944034 4.74871,-4.399547 6.24471,-5.456696 2.65465,-1.875908 2.72887,-1.963974 3.08914,-3.665393 0.20303,-0.958817 0.38303,-2.191077 0.4,-2.738355 l 0.0309,-0.995052 -13.36,-3.769101 c -7.348,-2.073006 -14.52016,-4.06232 -14.08,-4.212325 4.82132,-1.643097 18.8335,-8.362802 60.56,-19.66531 10.47242,2.413714 50.04752,17.827866 56.79996,20.861904 v 6.557379 6.557379 l 1.09752,0.963636 c 1.70842,1.500012 1.89487,3.848534 0.43034,5.420519 l -0.68028,0.730195 1.36098,7.073048 c 0.74854,3.890177 1.38583,7.277221 1.41621,7.526765 0.11302,0.928487 -1.95759,1.729909 -4.54446,1.758918 -2.34129,0.02626 -5.31504,-0.566329 -5.66239,-1.128358 -0.0911,-0.147362 0.49748,-3.584958 1.3079,-7.6391 l 1.47349,-7.371168 -0.67928,-0.953963 c -1.41615,-1.988803 -1.11941,-4.507255 0.68223,-5.790137 l 0.91774,-0.653488 v -6.058209 c 0,-3.332016 -0.0967,-6.05821 -0.2148,-6.05821 -0.11814,0 -4.3104,1.158581 -9.31612,2.574625 -5.00573,1.416044 -9.25107,2.524711 -9.43409,2.463705 -0.18302,-0.06101 -0.56276,-1.039587 -0.84388,-2.174625 l -0.51111,-2.063705 -2.72,-1.356728 c -5.09927,-2.543499 -12.45693,-4.581142 -20.08328,-5.561899 -4.02904,-0.518138 -13.74167,-0.514692 -17.83672,0.0063 -4.39591,0.5593 -8.70207,1.463084 -12.36224,2.594606 -3.13766,0.969992 -8.71663,3.185484 -8.51907,3.383049 0.0598,0.05982 1.18258,-0.230722 2.49503,-0.645644 7.84782,-2.481032 20.42549,-3.789949 29.64081,-3.084619 9.31508,0.712967 19.54589,3.072942 25.21383,5.816157 1.45657,0.704967 1.62161,0.901495 1.98919,2.368748 0.61599,2.458823 2.02245,10.767789 2.02245,11.948087 0,0.843673 0.44871,1.567152 2.27698,3.671323 3.08394,3.549309 5.29492,6.881005 6.72952,10.140589 1.26662,2.877921 2.8335,7.91071 2.8335,9.101165 0,0.501527 0.69199,1.251585 2.36018,2.558215 2.69183,2.108411 4.32478,4.098175 5.44845,6.638996 1.68698,3.81457 1.88619,8.53599 0.51424,12.18801 l -0.69363,1.84638 -1.46019,-1.62408 c -1.39035,-1.54641 -3.9853,-3.18868 -5.03841,-3.18868 -0.43016,0 -0.49097,1.21298 -0.49327,9.84 -0.003,10.27731 -0.21734,13.4207 -1.28965,18.88996 -1.56824,7.9988 -5.12907,16.72205 -9.32909,22.85425 -3.90174,5.69669 -11.09594,12.39648 -16.9725,15.8061 -1.18463,0.68733 -2.15424,1.39369 -2.15468,1.56969 -4.5e-4,0.176 0.97501,2.048 2.16768,4.16 l 2.16849,3.84 2.54619,0.19157 c 2.9712,0.22356 4.67524,0.97088 6.21652,2.7263 1.36155,1.55072 1.92967,2.95275 1.92967,4.76213 0,2.40535 -1.34426,4.64 -2.7912,4.64 -0.80564,0 -1.6888,-1.26046 -1.6888,-2.41028 0,-1.32398 -0.64265,-3.00876 -1.38135,-3.62137 -0.47436,-0.39339 -0.50343,-0.24901 -0.32802,1.62933 0.33486,3.58597 -1.04812,6.00232 -3.43538,6.00232 -0.66962,0 -1.31567,-0.15888 -1.43569,-0.35307 -0.12001,-0.19418 -0.2448,-1.45418 -0.2773,-2.8 -0.0421,-1.74485 -0.26467,-2.90602 -0.77559,-4.04693 -0.9029,-2.01624 -3.17015,-4.34489 -5.11915,-5.25774 -1.30726,-0.61229 -1.65359,-1.00071 -2.69352,-3.02086 -1.93775,-3.76423 -1.69332,-3.60033 -4.09738,-2.74746 -1.13114,0.40129 -2.16898,0.82587 -2.3063,0.94351 -0.13733,0.11765 0.40598,1.44642 1.20734,2.95282 1.50339,2.82608 1.85574,3.11297 3.84234,3.12848 2.33912,0.0183 5.69758,2.45852 6.70378,4.87097 1.26825,3.04072 0.19346,7.01648 -1.95386,7.22756 -1.33142,0.13087 -1.8963,-0.52175 -2.12532,-2.45545 -0.18983,-1.60282 -0.98363,-3.56183 -1.44328,-3.56183 -0.13323,0 -0.18514,1.01059 -0.11535,2.24576 0.14674,2.59689 -0.24859,3.81346 -1.61203,4.96071 -1.71005,1.43892 -3.77394,0.69643 -3.77394,-1.35768 0,-0.907 -0.34022,-0.90271 -2.61515,0.033 -3.73142,1.53475 -6.85069,4.28515 -9.207,8.11823 l -1.03275,1.68 h -5.76679 c -5.35789,0 -5.75207,-0.0397 -5.55929,-0.56 z m -0.56694,-69.12 c 3.53881,-5.69489 9.55831,-14.19315 12.51252,-17.66503 l 0.94026,-1.10504 3.00757,0.92596 c 5.15354,1.58664 9.39992,1.17843 13.25732,-1.27444 2.93244,-1.86471 5.25872,-5.10943 5.75297,-8.02431 0.42683,-2.51726 0.22266,-2.37666 3.45884,-2.38187 4.97518,-0.008 8.48756,-1.17373 11.47486,-3.80838 1.08361,-0.9557 1.64918,-1.77967 2.05015,-2.98688 0.30454,-0.91691 0.88679,-2.33024 1.29388,-3.14073 0.9397,-1.8709 1.71955,-4.847277 1.71955,-6.562841 0,-5.005565 -2.96777,-10.500641 -6.92302,-12.818576 -1.17393,-0.687964 -1.59085,-1.219418 -2.49955,-3.186186 -2.43407,-5.268209 -7.35935,-8.451683 -13.07596,-8.451683 -1.11571,0 -1.48184,-0.198988 -2.69418,-1.464251 -0.86934,-0.907296 -2.31588,-1.897776 -3.80299,-2.604003 -4.08251,-1.938774 -8.30935,-1.793718 -12.49901,0.428937 l -2.08151,1.104266 -1.81189,-0.680723 c -5.40559,-2.030869 -11.50777,-0.59543 -15.1738,3.569384 -1.48691,1.689228 -1.73322,1.839526 -3.34448,2.040839 -2.30021,0.287392 -3.67368,0.892385 -5.24146,2.308776 -1.43499,1.296432 -2.05644,2.336805 -2.71055,4.537794 -0.3886,1.307587 -0.62465,1.566775 -2.03688,2.236565 -3.25676,1.544613 -5.84358,4.568986 -6.87306,8.035633 -0.3107,1.046226 -0.51166,2.906625 -0.51166,4.73663 0,2.878575 -0.0498,3.094755 -1.11047,4.821919 -4.07551,6.63633 -1.83948,15.41064 4.89876,19.22302 0.23556,0.13328 0.63573,1.23194 0.88927,2.44148 0.5545,2.6453 1.4766,4.28306 3.53748,6.28304 3.20215,3.10751 7.59542,4.20742 12.09134,3.02722 1.0485,-0.27524 1.97137,-0.43544 2.0508,-0.356 0.0794,0.0794 -0.52963,2.62956 -1.35348,5.66695 -0.82385,3.03739 -1.49471,5.63053 -1.4908,5.76253 0.004,0.132 1.29978,0.24 2.87972,0.24 2.78787,0 2.88876,-0.026 3.41946,-0.88 z m 0.58792,-16.66934 c -1.36161,-0.83249 -1.81518,-1.47642 -2.24593,-3.18852 l -0.37792,-1.50214 -5.21775,-2.1384 -5.21775,-2.1384 -0.99032,0.75145 c -2.94323,2.23329 -6.86911,0.71261 -7.40617,-2.86876 -0.27951,-1.86389 0.57099,-3.59835 2.19968,-4.48589 l 1.17443,-0.64 8.6e-4,-5.46073 8.7e-4,-5.46074 -1.10434,-0.526622 c -1.44032,-0.68684 -2.16272,-1.834775 -2.3222,-3.690104 -0.30018,-3.492202 3.12458,-5.798791 6.50979,-4.384362 0.62848,0.262597 1.31657,0.370597 1.52908,0.24 1.01818,-0.625714 9.48595,-7.208147 9.68314,-7.527202 0.12378,-0.200286 0.18783,-0.969621 0.14232,-1.709633 -0.0473,-0.769844 0.13888,-1.774039 0.43527,-2.347196 1.4419,-2.788329 5.87398,-3.04999 7.76194,-0.458248 l 0.62143,0.853087 6.53178,-1.049177 c 3.59249,-0.577048 6.70126,-1.092348 6.9084,-1.145111 0.20714,-0.05276 0.66534,-0.74865 1.01823,-1.546415 2.11887,-4.79006 9.00684,-2.9365 8.63334,2.323239 l -0.10818,1.523378 7.00279,6.020747 7.00279,6.020747 1.19433,-0.357832 c 1.80098,-0.539587 2.9898,-0.435089 4.19277,0.368547 2.89485,1.933889 2.83214,5.987612 -0.11988,7.748953 -0.62246,0.3714 -1.4779,0.50524 -2.86687,0.44856 l -1.97968,-0.0808 -5.98157,6.360614 c -5.40992,5.75272 -5.95401,6.43311 -5.69313,7.11928 1.84437,4.85106 -4.26709,8.59115 -7.68232,4.70142 -0.80191,-0.91332 -0.98923,-1.40809 -0.98923,-2.61282 0,-0.81738 0.16808,-1.95096 0.37351,-2.51907 0.33825,-0.93543 0.29294,-1.12869 -0.48,-2.04727 -0.46943,-0.55789 -0.84893,-1.2553 -0.84333,-1.54979 0.0105,-0.55038 0.86125,-1.87663 1.04699,-1.63209 2.17434,2.86263 2.49905,3.13052 3.58162,2.95485 0.59392,-0.0964 1.51196,-0.0246 2.04009,0.1595 0.94546,0.32959 1.02378,0.26734 5.08509,-4.04148 7.04569,-7.475103 8.161,-8.78414 7.69708,-9.034028 -0.23158,-0.124738 -3.86495,0.404336 -8.07416,1.175719 -4.20922,0.771385 -7.69971,1.355915 -7.75667,1.298965 -0.057,-0.057 -0.19131,-0.54236 -0.29858,-1.078668 -0.18167,-0.908364 -0.12166,-0.987695 0.87667,-1.158999 14.42623,-2.475393 15.31169,-2.703153 15.31169,-3.938521 0,-0.511822 -1.7712,-2.154059 -8.58355,-7.958558 -5.18646,-4.419153 -5.59454,-4.700184 -6.33506,-4.36278 -1.90924,0.869906 -4.54776,0.223396 -5.85124,-1.433716 l -0.66636,-0.847138 -6.32189,1.021925 c -3.47705,0.562059 -6.57106,1.093194 -6.87558,1.180301 -0.30452,0.08711 -0.82361,0.761576 -1.15354,1.498819 -0.32993,0.737244 -0.90731,1.613441 -1.28308,1.947105 -0.91783,0.814985 -3.53964,1.054847 -4.7779,0.437119 -0.72029,-0.359327 -1.09477,-0.387489 -1.56802,-0.117924 -0.80952,0.461104 -9.65528,7.213303 -9.82141,7.496942 -0.07,0.11946 -0.0172,0.507697 0.11735,0.862749 0.20961,0.553278 1.48491,0.917205 8.92243,2.546161 7.91321,1.733144 8.67742,1.958226 8.67295,2.554452 -0.0113,1.503071 -0.15554,1.498191 -8.48519,-0.287263 -4.39445,-0.941947 -8.37233,-1.811744 -8.83974,-1.932883 -1.17886,-0.305527 -1.55751,0.83248 -0.67562,2.030527 1.25206,1.700934 6.75378,10.054134 7.24191,9.857574 0.19995,-0.0805 2.71597,-1.18013 5.59117,-2.44361 4.9447,-2.17291 5.25157,-2.26567 5.66983,-1.71387 0.2432,0.32085 0.44676,0.74605 0.45236,0.94488 0.009,0.3177 -2.63841,1.6072 -9.05593,4.41105 l -1.86611,0.81531 c 1.55654,2.16889 3.38314,4.78889 5.03234,7.21213 l 1.96924,0.16 c 1.61726,0.1314 2.14321,0.32672 2.94254,1.09278 2.3833,2.28407 1.9199,5.9125 -0.94426,7.39361 -1.24658,0.64463 -3.14754,0.59356 -4.30764,-0.11573 z m -1.44,-7.18126 c -1.616,-2.56451 -3.4742,-5.15489 -5.28984,-7.67007 l -2.80949,1.22022 c -4.0298,1.75022 -3.91356,1.98275 2.33933,4.67996 5.25245,2.26567 6.10746,2.32129 5.76,1.76989 z m -9.13773,-8.3712 c 1.32975,-0.60598 2.41649,-1.21798 2.41498,-1.36 -0.005,-0.4589 -6.8638,-10.133463 -7.27725,-10.264636 -0.30957,-0.09822 -0.4,1.136312 -0.4,5.460946 v 5.58784 c 0.84179,0.27616 1.42872,0.58836 2.12554,1.11587 0.45808,0.50907 0.32468,0.74148 3.13673,-0.54002 z m 23.08611,4.11367 c -1.36715,-1.04389 -1.4948,-1.25452 -1.40602,-2.32 l 0.0976,-1.17187 h 7.36 l 0.0976,1.17095 c 0.057,0.684 -0.0761,1.31411 -0.32,1.51518 -2.9135,2.40163 -3.61258,2.49826 -5.8292,0.80574 z m -1.61287,-6.13187 c -0.10743,-0.484 -0.83741,-1.95099 -1.62217,-3.25998 -0.78477,-1.30899 -1.51651,-2.85795 -1.62611,-3.44213 -0.53724,-2.863789 1.00339,-6.138922 3.60794,-7.669855 1.27846,-0.751471 1.90347,-0.906 3.62483,-0.896205 4.35113,0.02476 7.36,3.031089 7.36,7.353776 0,1.837534 -0.45099,3.039854 -1.81187,4.830414 -0.41636,0.54782 -0.98455,1.66382 -1.26265,2.48 l -0.50564,1.48398 h -7.56899 z m -4.3857,-16.000006 c -0.44545,-0.484 -1.20974,-1.42034 -1.69842,-2.080755 -0.72921,-0.985479 -0.8172,-1.286675 -0.49076,-1.68 0.71071,-0.856355 1.49354,-0.512576 3.00018,1.317517 1.55973,1.894598 1.71721,2.31722 1.09519,2.939238 -0.58257,0.582565 -1.01772,0.469334 -1.90619,-0.496 z m 14.83419,0.496 c -0.61375,-0.613751 -0.46951,-0.948731 1.24703,-2.896 1.63366,-1.853241 2.61018,-2.283839 2.98199,-1.31491 0.2287,0.595968 -0.31642,1.52766 -1.95491,3.341275 -1.19512,1.322851 -1.64779,1.495956 -2.27411,0.869635 z m -7.03723,-2.447963 c -0.29933,-0.189898 -0.38753,-1.048559 -0.32,-3.115099 0.0868,-2.654864 0.14171,-2.85984 0.79158,-2.952357 1.0117,-0.144029 1.34341,0.745485 1.24588,3.341005 -0.10891,2.898495 -0.49077,3.504692 -1.71746,2.726451 z m 37.53323,102.351969 c 5.37447,0.17546 10.77888,0.17166 16.16,0.16912 0.92968,-4.4e-4 -1.81385,4.79704 -2.52129,4.85391 -4.01367,0.32263 -9.1679,0.41697 -13.63871,0.41697 z"/></symbol></defs></svg>
+
+<!-- ============ TELA 1: LOGIN SSO ============ -->
+<section id="login">
+  <div class="login-hero">
+    <div class="logo hero-logo"><span class="logo-mark big"><svg aria-label="STI"><use href="#sti-logo" width="100%" height="100%"/></svg></span><div class="lt">STI<small>Central de Contas</small></div></div>
+    <div>
+      <h1>Governança institucional do <mark>Sistema de Tutores Inteligentes</mark></h1>
+      <p>Provisionamento de usuários, gestão acadêmica, parâmetros de IA e relatórios consolidados em um único lugar.</p>
+    </div>
+    <div class="tags"><span>SSO · OIDC/OAuth2</span><span>RBAC</span><span>Auditoria completa</span><span>Algoritmos · C · Python</span></div>
+  </div>
+  <div class="login-card">
+    <div class="login-box">
+      <div class="logo"><span class="logo-mark"><svg aria-label="STI"><use href="#sti-logo" width="100%" height="100%"/></svg></span><div class="lt">STI<small>Central de Contas</small></div></div>
+      <h2>Acesso do operador</h2>
+      <p class="sub">Use sua conta institucional. A autenticação ocorre no navegador padrão — nenhuma senha é armazenada neste aplicativo.</p>
+      <button class="btn-sso" id="btnSSO">🔐 Autenticar via Conta Institucional (SSO)</button>
+      <div class="login-state" id="loginState">
+        <ul class="steps" id="loginSteps">
+          <li data-s="0"><span class="spin"></span> Abrindo navegador padrão…</li>
+          <li data-s="1">Aguardando autenticação OIDC (Microsoft Entra ID)</li>
+          <li data-s="2">Capturando token de sessão</li>
+          <li data-s="3">Validando papel (role) na tabela de RBAC</li>
+        </ul>
+      </div>
+      <div class="role-pick">
+        <label>Simular papel retornado pelo diretório (demonstração)</label>
+        <select id="roleSim" style="width:100%">
+          <option value="Administrador">Administrador</option>
+          <option value="Professor">Professor (acesso negado)</option>
+          <option value="Aluno">Aluno (acesso negado)</option>
+        </select>
+      </div>
+      <div class="sec-note">🔒 RNF02 — Credenciais nunca são digitadas ou guardadas localmente. Apenas o token de sessão é mantido em memória.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+  <aside>
+    <div class="logo"><span class="logo-mark"><svg aria-label="STI"><use href="#sti-logo" width="100%" height="100%"/></svg></span><div class="lt">STI<small>Central</small></div></div>
+    <nav class="nav" id="nav">
+      <div class="nav-sec">Visão geral</div>
+      <button data-v="dashboard" class="on"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span><span class="t">Dashboard & BI</span></button>
+      <div class="nav-sec">Administração</div>
+      <button data-v="iam"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="t">Contas e Usuários</span></button>
+      <button data-v="academico"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span><span class="t">Gestão Acadêmica</span></button>
+      <button data-v="bots"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><path d="M8 16h.01M16 16h.01"/></svg></span><span class="t">Bots e IA</span></button>
+      <div class="nav-sec">Relatórios</div>
+      <button data-v="relatorios"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/></svg></span><span class="t">Central de Relatórios</span></button>
+    </nav>
+    <div class="side-foot">
+      <b id="whoName">Marcos Albuquerque</b>
+      <span id="whoRole">Administrador</span> · SSO ativo
+      <br><button id="btnLogout">Encerrar sessão</button>
+    </div>
+  </aside>
+  <main id="view"></main>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   DADOS MOCKADOS
+   ========================================================= */
+const MOCK = {
+  users: [
+    {id:1, nome:"Marcos Albuquerque", email:"marcos.albuquerque@uni.edu.br", role:"Administrador", status:"Ativo", turma:"—", prof:null, ultimo:"19/10/2026 16:02"},
+    {id:2, nome:"Dra. Helena Tavares", email:"helena.tavares@uni.edu.br", role:"Professor", status:"Ativo", turma:"C-2026.2-A", prof:null, ultimo:"19/10/2026 14:40"},
+    {id:3, nome:"Prof. Rogério Matos", email:"rogerio.matos@uni.edu.br", role:"Professor", status:"Ativo", turma:"PY-2026.2-A", prof:null, ultimo:"18/10/2026 21:15"},
+    {id:4, nome:"Prof. Daniel Furtado", email:"daniel.furtado@uni.edu.br", role:"Professor", status:"Ativo", turma:"PY-2026.2-B", prof:null, ultimo:"17/10/2026 09:30"},
+    {id:5, nome:"Ana Beatriz Lima", email:"ana.lima@aluno.uni.edu.br", role:"Aluno", status:"Ativo", turma:"C-2026.2-A", prof:"Intermediário", ultimo:"19/10/2026 15:11"},
+    {id:6, nome:"Bruno Carvalho", email:"bruno.carvalho@aluno.uni.edu.br", role:"Aluno", status:"Ativo", turma:"C-2026.2-A", prof:"Iniciante", ultimo:"19/10/2026 10:02"},
+    {id:7, nome:"Camila Ferreira", email:"camila.ferreira@aluno.uni.edu.br", role:"Aluno", status:"Ativo", turma:"PY-2026.2-A", prof:"Avançado", ultimo:"19/10/2026 13:48"},
+    {id:8, nome:"Diego Nascimento", email:"diego.nascimento@aluno.uni.edu.br", role:"Aluno", status:"Bloqueado", turma:"PY-2026.2-A", prof:"Iniciante", ultimo:"02/10/2026 18:20"},
+    {id:9, nome:"Eduarda Souza", email:"eduarda.souza@aluno.uni.edu.br", role:"Aluno", status:"Ativo", turma:"PY-2026.2-B", prof:"Intermediário", ultimo:"18/10/2026 22:05"},
+    {id:10, nome:"Felipe Moreira", email:"felipe.moreira@aluno.uni.edu.br", role:"Aluno", status:"Ativo", turma:"C-2026.2-B", prof:"Iniciante", ultimo:"12/10/2026 08:44"},
+    {id:11, nome:"Gabriela Rocha", email:"gabriela.rocha@aluno.uni.edu.br", role:"Aluno", status:"Ativo", turma:"C-2026.2-B", prof:"Intermediário", ultimo:"19/10/2026 11:30"},
+    {id:12, nome:"Henrique Dias", email:"henrique.dias@aluno.uni.edu.br", role:"Aluno", status:"Bloqueado", turma:"PY-2026.2-B", prof:"Iniciante", ultimo:"21/09/2026 17:12"},
+    {id:13, nome:"Isabela Martins", email:"isabela.martins@aluno.uni.edu.br", role:"Aluno", status:"Ativo", turma:"PY-2026.2-B", prof:"Avançado", ultimo:"19/10/2026 09:17"},
+    {id:14, nome:"Dr. Paulo Sampaio", email:"paulo.sampaio@uni.edu.br", role:"Professor", status:"Ativo", turma:"C-2026.2-B", prof:null, ultimo:"16/10/2026 15:55"}
+  ],
+  disciplinas: [
+    {id:1, nome:"Algoritmos e Programação em C", sigla:"C", licoes:24, ativa:true, cor:"#5b8cff"},
+    {id:2, nome:"Algoritmos e Programação em Python", sigla:"PY", licoes:22, ativa:true, cor:"#c9dbff"},
+    {id:3, nome:"Estruturas de Dados em C", sigla:"EDC", licoes:18, ativa:false, cor:"#3d6bff"}
+  ],
+  turmas: [
+    {cod:"C-2026.2-A", disc:1, semestre:"2026.2", prof:"Dra. Helena Tavares", alunos:38, turno:"Manhã"},
+    {cod:"C-2026.2-B", disc:1, semestre:"2026.2", prof:"Dr. Paulo Sampaio", alunos:35, turno:"Noite"},
+    {cod:"PY-2026.2-A", disc:2, semestre:"2026.2", prof:"Prof. Rogério Matos", alunos:42, turno:"Tarde"},
+    {cod:"PY-2026.2-B", disc:2, semestre:"2026.2", prof:"Prof. Daniel Furtado", alunos:40, turno:"Noite"},
+    {cod:"C-2026.1-A", disc:1, semestre:"2026.1", prof:"Dra. Helena Tavares", alunos:36, turno:"Manhã"}
+  ],
+  engajamento: {
+    labels:["Sem 1","Sem 2","Sem 3","Sem 4","Sem 5","Sem 6","Sem 7","Sem 8","Sem 9","Sem 10"],
+    interacoes:[820,910,1040,1180,1290,1240,1410,1520,1480,1630],
+    quizzes:[210,250,300,330,380,350,420,470,455,510]
+  },
+  gargalos: [
+    {topico:"Ponteiros e alocação dinâmica (C)", taxa:41},
+    {topico:"Recursão", taxa:48},
+    {topico:"Laços aninhados", taxa:57},
+    {topico:"Listas e dicionários (Python)", taxa:63},
+    {topico:"Manipulação de strings (C)", taxa:66},
+    {topico:"Funções e escopo", taxa:74}
+  ],
+  alertas: [
+    {aluno:"Diego Nascimento", turma:"PY-2026.2-A", risco:"Alto", motivo:"17 dias sem acesso · queda de 62% nos quizzes"},
+    {aluno:"Henrique Dias", turma:"PY-2026.2-B", risco:"Alto", motivo:"28 dias sem acesso"},
+    {aluno:"Felipe Moreira", turma:"C-2026.2-B", risco:"Médio", motivo:"7 dias sem acesso · 3 quizzes reprovados"},
+    {aluno:"Bruno Carvalho", turma:"C-2026.2-A", risco:"Médio", motivo:"Desempenho abaixo de 50% em ponteiros"},
+    {aluno:"Larissa Pires", turma:"C-2026.2-A", risco:"Baixo", motivo:"Frequência irregular"}
+  ],
+  relatorio: [
+    {turma:"C-2026.2-A", disc:"C", alunos:38, interacoes:3120, quizzes:610, media:7.4, evasao:5.3, engajamento:82},
+    {turma:"C-2026.2-B", disc:"C", alunos:35, interacoes:2480, quizzes:455, media:6.8, evasao:11.4, engajamento:71},
+    {turma:"PY-2026.2-A", disc:"Python", alunos:42, interacoes:4010, quizzes:790, media:7.9, evasao:4.8, engajamento:88},
+    {turma:"PY-2026.2-B", disc:"Python", alunos:40, interacoes:3390, quizzes:640, media:7.2, evasao:7.5, engajamento:79},
+    {turma:"C-2026.1-A", disc:"C", alunos:36, interacoes:2870, quizzes:590, media:7.1, evasao:8.3, engajamento:75}
+  ],
+  audit: [
+    {t:"15:48", u:"marcos.albuquerque", a:"Alterou limite de tokens Groq: 4096 → 6144"},
+    {t:"14:12", u:"marcos.albuquerque", a:"Bloqueou conta henrique.dias@aluno.uni.edu.br"},
+    {t:"11:30", u:"marcos.albuquerque", a:"Criou turma PY-2026.2-B (Python, noite)"},
+    {t:"09:05", u:"marcos.albuquerque", a:"Importou 42 contas via CSV (PY-2026.2-A)"}
+  ]
+};
+const S = {
+  users: JSON.parse(JSON.stringify(MOCK.users)),
+  turmas: JSON.parse(JSON.stringify(MOCK.turmas)),
+  disciplinas: JSON.parse(JSON.stringify(MOCK.disciplinas)),
+  audit: JSON.parse(JSON.stringify(MOCK.audit)),
+  ai: {tokens:6144, temp:0.4, modelo:"llama-3.3-70b-versatile", chroma:{status:"Online", docs:1284, colecoes:3, ultima:"18/10/2026 22:00"}},
+  iamFilter:{q:"", role:"Todos", status:"Todos"},
+  rel:{sem:"2026.2", disc:"Todas", formato:"turma"},
+  view:"dashboard", sessionUser:"marcos.albuquerque"
+};
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const now = ()=>new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+const initials = n=>n.replace(/^(Dra?\.|Prof\.)\s*/,"").split(" ").slice(0,2).map(x=>x[0]).join("").toUpperCase();
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove("on"),2600)}
+function log(a){S.audit.unshift({t:now(),u:S.sessionUser,a}); }
+function modal(html,onMount){
+  const r=$("#modalRoot");
+  r.innerHTML=`<div class="overlay"><div class="modal">${html}</div></div>`;
+  $(".overlay",r).addEventListener("mousedown",e=>{if(e.target.classList.contains("overlay"))closeModal()});
+  onMount&&onMount(r);
+}
+function closeModal(){$("#modalRoot").innerHTML=""}
+function download(name,content,type){
+  const b=new Blob([content],{type}),a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href);
+}
+const roleBadge = r=>({Administrador:"b-info",Professor:"b-warn",Aluno:"b-gray"})[r];
+const discNome = id=>S.disciplinas.find(d=>d.id==id)?.nome||"—";
+
+/* ---------- Charts SVG ---------- */
+function lineChart(labels,series,colors,names){
+  const W=640,H=250,p={l:42,r:14,t:14,b:30};
+  const max=Math.ceil(Math.max(...series.flat())/200)*200;
+  const x=i=>p.l+i*(W-p.l-p.r)/(labels.length-1), y=v=>H-p.b-(v/max)*(H-p.t-p.b);
+  let g="";
+  for(let i=0;i<=4;i++){const v=max/4*i;g+=`<line x1="${p.l}" x2="${W-p.r}" y1="${y(v)}" y2="${y(v)}" stroke="#4a4e57"/><text x="${p.l-8}" y="${y(v)+4}" font-size="10" fill="#a3a8b4" text-anchor="end">${v}</text>`}
+  labels.forEach((l,i)=>g+=`<text x="${x(i)}" y="${H-10}" font-size="10" fill="#a3a8b4" text-anchor="middle">${l}</text>`);
+  series.forEach((s,k)=>{
+    const pts=s.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
+    g+=`<polygon points="${p.l},${H-p.b} ${pts} ${W-p.r},${H-p.b}" fill="${colors[k]}" opacity=".08"/>`;
+    g+=`<polyline points="${pts}" fill="none" stroke="${colors[k]}" stroke-width="3.5" stroke-linejoin="round"/>`;
+    s.forEach((v,i)=>g+=`<circle cx="${x(i)}" cy="${y(v)}" r="4.5" fill="#2b2d33" stroke="${colors[k]}" stroke-width="3"><title>${names[k]}: ${v}</title></circle>`);
+  });
+  const lg=names.map((n,k)=>`<span style="margin-right:1rem"><span class="dot" style="background:${colors[k]}"></span>${n}</span>`).join("");
+  return `<div style="font-size:0.75rem;color:var(--mute);margin-bottom:0.375rem">${lg}</div><svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg>`;
+}
+function donut(pct,color,label){
+  const r=46,c=2*Math.PI*r;
+  return `<svg viewBox="0 0 120 120" style="width:7.5rem"><circle cx="60" cy="60" r="${r}" fill="none" stroke="#202226" stroke-width="12"/>
+  <circle cx="60" cy="60" r="${r}" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${c*pct/100} ${c}" transform="rotate(-90 60 60)"/>
+  <text x="60" y="58" text-anchor="middle" font-size="20" font-weight="700" fill="#ececf0">${pct}%</text>
+  <text x="60" y="76" text-anchor="middle" font-size="9.5" fill="#a3a8b4">${label}</text></svg>`;
+}
+
+/* =========================================================
+   LOGIN (Tela 1)
+   ========================================================= */
+$("#btnSSO").onclick=()=>{
+  const role=$("#roleSim").value;
+  modal(`<div class="browser-win" style="margin:-1.5rem">
+    <div class="browser-bar"><span>●●●</span><div class="url">🔒 login.microsoftonline.com/uni-edu/oauth2/v2.0/authorize</div></div>
+    <div class="browser-body">
+      <div class="ms"><i style="background:#f25022"></i><i style="background:#7fba00"></i><i style="background:#00a4ef"></i><i style="background:#ffb900"></i></div>
+      <h3 style="margin-bottom:0.375rem">Entrar com a conta institucional</h3>
+      <p style="color:var(--mute);margin-bottom:1.25rem">marcos.albuquerque@uni.edu.br</p>
+      <p style="color:var(--mute);font-size:0.7812rem">Janela do navegador padrão (simulada). Autenticando…</p>
+      <div style="margin-top:1.125rem"><span class="spin"></span></div>
+    </div></div>`);
+  $("#loginState").classList.add("on");
+  const items=$$("#loginSteps li");
+  const mark=i=>items.forEach((li,k)=>{li.className=k<i?"done":k==i?"act":"";li.querySelector(".spin")?.remove();if(k<i&&!li.textContent.startsWith("✔"))li.prepend("✔ ")});
+  mark(0);
+  [900,1900,2700,3500].forEach((ms,i)=>setTimeout(()=>{
+    if(i<3)mark(i+1);
+    else{
+      closeModal();items.forEach(li=>{li.className="done"});
+      if(role!=="Administrador"){toast(`Acesso negado: papel "${role}" não possui permissão na Central.`);$("#loginState").classList.remove("on");return}
+      $("#login").classList.add("hidden");$("#app").classList.remove("hidden");go("dashboard");toast("Sessão iniciada · papel validado: Administrador");
+    }
+  },ms));
+};
+$("#btnLogout").onclick=()=>{
+  $("#app").classList.add("hidden");$("#login").classList.remove("hidden");$("#loginState").classList.remove("on");
+  $$("#loginSteps li").forEach((li,i)=>{li.className="";li.innerHTML=["<span class='spin'></span> Abrindo navegador padrão…","Aguardando autenticação OIDC (Microsoft Entra ID)","Capturando token de sessão","Validando papel (role) na tabela de RBAC"][i]});
+};
+
+/* =========================================================
+   ROUTER
+   ========================================================= */
+function go(v){
+  S.view=v;
+  $$("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  $("#view").innerHTML=VIEWS[v]();
+  BIND[v]&&BIND[v]();
+  $("#view").scrollTop=0;
+}
+$("#nav").onclick=e=>{const b=e.target.closest("button");if(b)go(b.dataset.v)};
+
+const head=(t,p,act="")=>`<div class="top"><div><h1>${t}</h1><p>${p}</p></div><div class="actions">${act}</div></div>`;
+
+/* =========================================================
+   TELA 2: DASHBOARD
+   ========================================================= */
+const VIEWS={};const BIND={};
+VIEWS.dashboard=()=>{
+  const ativos=S.users.filter(u=>u.status==="Ativo").length;
+  const alunos=S.users.filter(u=>u.role==="Aluno").length;
+  return head("Dashboard Executivo","Visão macro do uso do STI · Semestre 2026.2 · atualizado hoje, "+now(),
+    `<button class="btn" onclick="go('relatorios')">📄 Ir para relatórios</button>`)+`
+  <div class="grid g4" style="margin-bottom:1rem">
+    <div class="card kpi"><div class="lbl">Alunos ativos no STI</div><div class="val">2.847</div><div class="delta up">▲ 6,2% vs. semestre anterior</div></div>
+    <div class="card kpi"><div class="lbl">Interações com o tutor (30d)</div><div class="val">48,3 mil</div><div class="delta up">▲ 14,8%</div></div>
+    <div class="card kpi"><div class="lbl">Taxa de evasão estimada</div><div class="val">7,4%</div><div class="delta up">▼ 1,9 p.p. (melhora)</div></div>
+    <div class="card kpi"><div class="lbl">Média geral nos quizzes</div><div class="val">7,3</div><div class="delta down">▼ 0,1 vs. mês anterior</div></div>
+  </div>
+  <div class="grid g21" style="margin-bottom:1rem">
+    <div class="card"><h3>Engajamento semanal</h3><div class="hint">Interações com o tutor e tentativas de quiz</div>
+      ${lineChart(MOCK.engajamento.labels,[MOCK.engajamento.interacoes,MOCK.engajamento.quizzes],["#5b8cff","#c9dbff"],["Interações","Quizzes"])}</div>
+    <div class="card"><h3>Engajamento por disciplina</h3><div class="hint">% de alunos com atividade na última semana</div>
+      <div style="display:flex;justify-content:space-around;margin-top:0.875rem">${donut(81,"#5b8cff","Algoritmos C")}${donut(86,"#c9dbff","Python")}</div>
+      <div style="margin-top:0.875rem;color:var(--mute);font-size:0.7812rem;line-height:1.5">Python mantém engajamento 5 p.p. acima de C, concentrado nas turmas da tarde.</div></div>
+  </div>
+  <div class="grid g2" style="margin-bottom:1rem">
+    <div class="card"><h3>Tópicos com maiores gargalos</h3><div class="hint">Menor taxa de acerto nos quizzes</div>
+      ${MOCK.gargalos.map(g=>`<div class="bar-row"><span>${g.topico}</span><div class="bar-bg"><div class="bar-fill" style="width:${g.taxa}%;background:${g.taxa<50?"var(--bad)":g.taxa<65?"var(--warn)":"var(--brand)"}"></div></div><b>${g.taxa}%</b></div>`).join("")}</div>
+    <div class="card"><h3>⚠ Alertas de evasão acadêmica</h3><div class="hint">Calculado pelo comportamento dos alunos</div>
+      ${MOCK.alertas.map(a=>`<div style="display:flex;justify-content:space-between;gap:0.625rem;padding:0.5625rem 0;border-bottom:1px solid var(--line)">
+        <div><b>${a.aluno}</b> <span style="color:var(--mute)">· ${a.turma}</span><div style="font-size:0.75rem;color:var(--mute)">${a.motivo}</div></div>
+        <span class="badge ${a.risco==="Alto"?"b-bad":a.risco==="Médio"?"b-warn":"b-gray"}" style="height:fit-content">${a.risco}</span></div>`).join("")}</div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3>Contas (resumo)</h3><div class="hint">Base provisionada na Central</div>
+      <div class="grid g3"><div><div style="font-size:1.5rem;font-weight:700">${S.users.length}</div><span style="color:var(--mute);font-size:0.75rem">cadastradas (amostra)</span></div>
+      <div><div style="font-size:1.5rem;font-weight:700">${alunos}</div><span style="color:var(--mute);font-size:0.75rem">alunos c/ PerfilAluno</span></div>
+      <div><div style="font-size:1.5rem;font-weight:700">${ativos}</div><span style="color:var(--mute);font-size:0.75rem">ativas</span></div></div></div>
+    <div class="card"><h3>Auditoria recente</h3><div class="hint">RNF04 · ações administrativas registradas</div>
+      <ul class="audit">${S.audit.slice(0,4).map(l=>`<li><time>${l.t}</time><span><b>${l.u}</b> — ${l.a}</span></li>`).join("")}</ul></div>
+  </div>`;
+};
+
+/* =========================================================
+   TELA 3: IAM
+   ========================================================= */
+VIEWS.iam=()=>head("Contas e Usuários","Gestão de identidades, papéis (RBAC) e provisionamento em lote",
+  `<button class="btn" id="btnImport">⬆ Importar CSV/Excel</button><button class="btn pri" id="btnNovo">＋ Nova conta</button>`)+`
+  <div class="toolbar">
+    <input type="search" id="fQ" placeholder="Buscar por nome ou e-mail…" value="${S.iamFilter.q}">
+    <select id="fRole">${["Todos","Administrador","Professor","Aluno"].map(r=>`<option ${S.iamFilter.role===r?"selected":""}>${r}</option>`).join("")}</select>
+    <select id="fStatus">${["Todos","Ativo","Bloqueado"].map(r=>`<option ${S.iamFilter.status===r?"selected":""}>${r}</option>`).join("")}</select>
+    <span id="iamCount" style="color:var(--mute);margin-left:auto"></span>
+  </div>
+  <div class="tbl-wrap"><table><thead><tr><th>Usuário</th><th>Papel (RBAC)</th><th>Turma</th><th>PerfilAluno</th><th>Último acesso</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody id="iamBody"></tbody></table></div>`;
+function iamRows(){
+  const f=S.iamFilter,q=f.q.toLowerCase();
+  const list=S.users.filter(u=>(!q||u.nome.toLowerCase().includes(q)||u.email.includes(q))&&(f.role==="Todos"||u.role===f.role)&&(f.status==="Todos"||u.status===f.status));
+  $("#iamCount").textContent=`${list.length} de ${S.users.length} usuários`;
+  $("#iamBody").innerHTML=list.length?list.map(u=>`<tr>
+    <td><span class="avatar">${initials(u.nome)}</span><b>${u.nome}</b><div style="margin-left:2.625rem;font-size:0.75rem;color:var(--mute)">${u.email}</div></td>
+    <td><span class="badge ${roleBadge(u.role)}">${u.role}</span></td>
+    <td>${u.turma}</td>
+    <td>${u.role==="Aluno"?`<span class="badge b-ok">✔ ${u.prof}</span>`:`<span style="color:var(--mute)">n/a</span>`}</td>
+    <td style="color:var(--mute)">${u.ultimo}</td>
+    <td><label class="switch"><input type="checkbox" data-t="${u.id}" ${u.status==="Ativo"?"checked":""}><span></span></label> <span style="margin-left:0.375rem">${u.status}</span></td>
+    <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-e="${u.id}">Editar</button> <button class="btn sm danger" data-d="${u.id}">Excluir</button></td></tr>`).join(""):`<tr><td colspan="7" class="empty">Nenhum usuário encontrado.</td></tr>`;
+}
+function userForm(u){
+  const e=!!u;u=u||{nome:"",email:"",role:"Aluno",turma:S.turmas[0].cod};
+  modal(`<h3>${e?"Editar conta":"Nova conta"}</h3>
+   <div class="field"><label>Nome completo</label><input id="uNome" value="${u.nome}"></div>
+   <div class="field"><label>E-mail institucional</label><input id="uEmail" value="${u.email}" placeholder="nome@uni.edu.br"></div>
+   <div class="row2"><div class="field"><label>Papel (RBAC)</label><select id="uRole">${["Aluno","Professor","Administrador"].map(r=>`<option ${u.role===r?"selected":""}>${r}</option>`).join("")}</select></div>
+   <div class="field"><label>Turma</label><select id="uTurma"><option>—</option>${S.turmas.map(t=>`<option ${u.turma===t.cod?"selected":""}>${t.cod}</option>`).join("")}</select></div></div>
+   <div class="sec-note" id="uNote">Ao criar um Aluno, o registro de <b>PerfilAluno</b> é gerado automaticamente (proficiência inicial: Iniciante).</div>
+   <div class="foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" id="uSave">Salvar</button></div>`,r=>{
+    $("#uSave",r).onclick=()=>{
+      const nome=$("#uNome").value.trim(),email=$("#uEmail").value.trim(),role=$("#uRole").value,turma=$("#uTurma").value;
+      if(!nome||!/^\S+@\S+\.\S+$/.test(email))return toast("Preencha nome e e-mail válidos.");
+      if(e){Object.assign(u,{nome,email,role,turma});if(role==="Aluno"&&!u.prof)u.prof="Iniciante";if(role!=="Aluno")u.prof=null;log(`Editou conta ${email} (${role})`)}
+      else{S.users.unshift({id:Date.now(),nome,email,role,turma,status:"Ativo",prof:role==="Aluno"?"Iniciante":null,ultimo:"—"});log(`Criou conta ${email} (${role})${role==="Aluno"?" + PerfilAluno":""}`)}
+      closeModal();iamRows();toast("Conta salva com sucesso.");
+    };
+  });
+}
+BIND.iam=()=>{
+  iamRows();
+  $("#fQ").oninput=e=>{S.iamFilter.q=e.target.value;iamRows()};
+  $("#fRole").onchange=e=>{S.iamFilter.role=e.target.value;iamRows()};
+  $("#fStatus").onchange=e=>{S.iamFilter.status=e.target.value;iamRows()};
+  $("#btnNovo").onclick=()=>userForm();
+  $("#iamBody").onclick=e=>{
+    const ed=e.target.dataset.e,dl=e.target.dataset.d;
+    if(ed)userForm(S.users.find(u=>u.id==ed));
+    if(dl){const u=S.users.find(x=>x.id==dl);
+      modal(`<h3>Excluir conta?</h3><p style="color:var(--mute);line-height:1.5">A exclusão é <b>lógica</b>: <b>${u.nome}</b> será removido das listagens, mas o histórico de aprendizagem é preservado.</p>
+      <div class="foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" id="okDel" style="background:var(--bad);border-color:var(--bad)">Excluir</button></div>`,r=>{
+        $("#okDel",r).onclick=()=>{S.users=S.users.filter(x=>x.id!=dl);log(`Excluiu logicamente a conta ${u.email}`);closeModal();iamRows();toast("Conta excluída logicamente.")}});}
+  };
+  $("#iamBody").onchange=e=>{
+    const id=e.target.dataset.t;if(!id)return;
+    const u=S.users.find(x=>x.id==id);u.status=e.target.checked?"Ativo":"Bloqueado";
+    log(`${u.status==="Ativo"?"Reativou":"Bloqueou"} conta ${u.email}`);iamRows();toast(`Conta ${u.status==="Ativo"?"reativada":"bloqueada"}.`);
+  };
+  $("#btnImport").onclick=()=>modal(`<h3>Importação em lote</h3>
+    <div class="dropzone" id="dz">📁 Clique para selecionar um arquivo <b>.csv</b> ou <b>.xlsx</b><br><small>Colunas esperadas: nome, email, papel, turma</small></div>
+    <div id="impPrev" class="hidden" style="margin-top:0.875rem"></div>
+    <div class="foot"><button class="btn" onclick="closeModal()">Fechar</button><button class="btn pri hidden" id="impOk">Provisionar contas</button></div>`,r=>{
+      $("#dz",r).onclick=()=>{
+        const novos=[["Larissa Pires","larissa.pires@aluno.uni.edu.br"],["Marcelo Antunes","marcelo.antunes@aluno.uni.edu.br"],["Nathalia Ribeiro","nathalia.ribeiro@aluno.uni.edu.br"],["Otávio Brandão","otavio.brandao@aluno.uni.edu.br"]];
+        $("#dz",r).innerHTML="✔ <b>turma_C_2026.2_A.csv</b> — 4 linhas lidas";
+        $("#impPrev",r).classList.remove("hidden");
+        $("#impPrev",r).innerHTML=`<table><thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Turma</th></tr></thead><tbody>${novos.map(n=>`<tr><td>${n[0]}</td><td>${n[1]}</td><td>Aluno</td><td>C-2026.2-A</td></tr>`).join("")}</tbody></table>
+        <p style="margin-top:0.5rem;font-size:0.7812rem;color:var(--ok)">✔ Validação OK · 4 PerfilAluno serão criados automaticamente.</p>`;
+        $("#impOk",r).classList.remove("hidden");
+        $("#impOk",r).onclick=()=>{novos.forEach((n,i)=>S.users.unshift({id:Date.now()+i,nome:n[0],email:n[1],role:"Aluno",turma:"C-2026.2-A",status:"Ativo",prof:"Iniciante",ultimo:"—"}));
+          log("Importou 4 contas via CSV (C-2026.2-A)");closeModal();iamRows();toast("4 contas provisionadas.")};
+      };
+    });
+};
+
+/* =========================================================
+   TELA 4: ACADÊMICO
+   ========================================================= */
+VIEWS.academico=()=>head("Gestão Acadêmica","Semestres, disciplinas, professores titulares e enturmação",
+  `<button class="btn" id="btnDisc">＋ Nova disciplina</button><button class="btn pri" id="btnTurma">＋ Nova turma</button>`)+`
+  <div class="grid g3" style="margin-bottom:1.125rem">${S.disciplinas.map(d=>`
+    <div class="card" style="border-top:.625rem solid ${d.cor}">
+      <div style="display:flex;justify-content:space-between"><h3>${d.nome}</h3>
+      <label class="switch"><input type="checkbox" data-dis="${d.id}" ${d.ativa?"checked":""}><span></span></label></div>
+      <div class="hint">${d.licoes} lições cadastradas · ${S.turmas.filter(t=>t.disc==d.id).length} turmas</div>
+      <span class="badge ${d.ativa?"b-ok":"b-gray"}">${d.ativa?"Ativa":"Inativa"}</span></div>`).join("")}</div>
+  <div class="tabs" id="semTabs">${["2026.2","2026.1","Todos"].map(s=>`<button data-s="${s}" class="${s==="2026.2"?"on":""}">${s==="Todos"?"Todos os semestres":"Semestre "+s}</button>`).join("")}</div>
+  <div class="tbl-wrap"><table><thead><tr><th>Turma</th><th>Disciplina</th><th>Semestre</th><th>Turno</th><th>Professor titular</th><th>Alunos</th><th style="text-align:right">Ações</th></tr></thead><tbody id="turmaBody"></tbody></table></div>`;
+function turmaRows(sem){
+  const l=S.turmas.filter(t=>sem==="Todos"||t.semestre===sem);
+  $("#turmaBody").innerHTML=l.map(t=>`<tr><td><b>${t.cod}</b></td><td>${discNome(t.disc)}</td><td>${t.semestre}</td><td>${t.turno}</td><td>${t.prof}</td>
+   <td>${t.alunos}</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-al="${t.cod}">Alunos</button> <button class="btn sm" data-pf="${t.cod}">Trocar professor</button></td></tr>`).join("")||`<tr><td colspan="7" class="empty">Sem turmas.</td></tr>`;
+}
+BIND.academico=()=>{
+  let sem="2026.2";turmaRows(sem);
+  $("#semTabs").onclick=e=>{const b=e.target.closest("button");if(!b)return;sem=b.dataset.s;$$("#semTabs button").forEach(x=>x.classList.toggle("on",x===b));turmaRows(sem)};
+  $$("[data-dis]").forEach(c=>c.onchange=()=>{const d=S.disciplinas.find(x=>x.id==c.dataset.dis);d.ativa=c.checked;log(`${d.ativa?"Ativou":"Desativou"} disciplina ${d.nome}`);go("academico");toast("Disciplina atualizada.")});
+  const profs=()=>S.users.filter(u=>u.role==="Professor").map(u=>u.nome);
+  $("#btnTurma").onclick=()=>modal(`<h3>Nova turma</h3>
+    <div class="field"><label>Código</label><input id="tCod" placeholder="Ex.: C-2026.2-C"></div>
+    <div class="row2"><div class="field"><label>Disciplina</label><select id="tDisc">${S.disciplinas.filter(d=>d.ativa).map(d=>`<option value="${d.id}">${d.nome}</option>`).join("")}</select></div>
+    <div class="field"><label>Semestre</label><select id="tSem"><option>2026.2</option><option>2026.1</option></select></div></div>
+    <div class="row2"><div class="field"><label>Professor titular</label><select id="tProf">${profs().map(p=>`<option>${p}</option>`).join("")}</select></div>
+    <div class="field"><label>Turno</label><select id="tTurno"><option>Manhã</option><option>Tarde</option><option>Noite</option></select></div></div>
+    <div class="foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" id="tOk">Criar turma</button></div>`,r=>{
+      $("#tOk",r).onclick=()=>{const cod=$("#tCod").value.trim();if(!cod)return toast("Informe o código da turma.");
+        S.turmas.unshift({cod,disc:+$("#tDisc").value,semestre:$("#tSem").value,prof:$("#tProf").value,alunos:0,turno:$("#tTurno").value});
+        log(`Criou turma ${cod}`);closeModal();go("academico");toast("Turma criada.")}});
+  $("#btnDisc").onclick=()=>modal(`<h3>Nova disciplina</h3>
+    <div class="field"><label>Nome</label><input id="dNome" placeholder="Ex.: Programação Orientada a Objetos"></div>
+    <div class="field"><label>Nº de lições</label><input id="dLic" type="number" value="20"></div>
+    <div class="foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" id="dOk">Criar</button></div>`,r=>{
+      $("#dOk",r).onclick=()=>{const n=$("#dNome").value.trim();if(!n)return toast("Informe o nome.");
+        S.disciplinas.push({id:Date.now(),nome:n,sigla:"NEW",licoes:+$("#dLic").value||0,ativa:true,cor:"#9dbcff"});log(`Criou disciplina ${n}`);closeModal();go("academico");toast("Disciplina criada.")}});
+  $("#turmaBody").onclick=e=>{
+    const al=e.target.dataset.al,pf=e.target.dataset.pf;
+    if(pf){const t=S.turmas.find(x=>x.cod===pf);
+      modal(`<h3>Professor titular · ${t.cod}</h3><div class="field"><label>Selecione</label><select id="pSel">${profs().map(p=>`<option ${p===t.prof?"selected":""}>${p}</option>`).join("")}</select></div>
+      <div class="foot"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" id="pOk">Salvar</button></div>`,r=>{
+        $("#pOk",r).onclick=()=>{t.prof=$("#pSel").value;log(`Alterou professor de ${t.cod} para ${t.prof}`);closeModal();turmaRows(sem);toast("Professor atualizado.")}})}
+    if(al){const t=S.turmas.find(x=>x.cod===al),ls=S.users.filter(u=>u.role==="Aluno"&&u.turma===al);
+      modal(`<h3>Alunos · ${t.cod}</h3><p style="color:var(--mute);margin-bottom:0.625rem">${t.alunos} matriculados (exibindo amostra de ${ls.length})</p>
+      ${ls.length?ls.map(u=>`<div style="padding:0.5rem 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between"><span><span class="avatar">${initials(u.nome)}</span>${u.nome}</span><span class="badge b-ok">${u.prof}</span></div>`).join(""):`<div class="empty">Sem alunos na amostra.</div>`}
+      <div class="foot"><button class="btn" onclick="closeModal()">Fechar</button></div>`)}
+  };
+};
+
+/* =========================================================
+   TELA 5: BOTS E IA
+   ========================================================= */
+VIEWS.bots=()=>head("Bots e Parâmetros de IA","Motor de IA, limites da API Groq e indexação do ChromaDB",
+  `<button class="btn" id="btnPing">↻ Verificar status</button>`)+`
+  <div class="grid g3" style="margin-bottom:1rem">
+    <div class="card kpi"><div class="lbl">Motor de IA (Groq API)</div><div class="val" style="font-size:1.25rem"><span class="dot" style="background:var(--ok)"></span><span id="stGroq">Operacional</span></div><div class="delta" style="color:var(--mute)">Latência média: <b id="lat">412 ms</b></div></div>
+    <div class="card kpi"><div class="lbl">ChromaDB</div><div class="val" style="font-size:1.25rem"><span class="dot" style="background:var(--ok)"></span>${S.ai.chroma.status}</div><div class="delta" style="color:var(--mute)">${S.ai.chroma.docs} documentos · ${S.ai.chroma.colecoes} coleções</div></div>
+    <div class="card kpi"><div class="lbl">Consumo de tokens (hoje)</div><div class="val" style="font-size:1.25rem">1,84 M</div><div class="progress" style="margin-top:0.5rem"><div style="width:61%"></div></div><div class="delta" style="color:var(--mute);margin-top:0.25rem">61% da cota diária (3 M)</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3>Parâmetros globais</h3><div class="hint">Aplicados a todos os tutores (C e Python)</div>
+      <div class="field"><label>Modelo</label><select id="aiModel">${["llama-3.3-70b-versatile","llama-3.1-8b-instant","mixtral-8x7b-32768"].map(m=>`<option ${S.ai.modelo===m?"selected":""}>${m}</option>`).join("")}</select></div>
+      <div class="field"><label>Limite de tokens por resposta: <b id="tkVal">${S.ai.tokens}</b></label><input type="range" id="aiTokens" min="512" max="8192" step="256" value="${S.ai.tokens}" style="padding:0"></div>
+      <div class="field"><label>Temperatura: <b id="tpVal">${S.ai.temp}</b></label><input type="range" id="aiTemp" min="0" max="1" step="0.1" value="${S.ai.temp}" style="padding:0"></div>
+      <button class="btn pri" id="aiSave">Salvar parâmetros</button></div>
+    <div class="card"><h3>Indexação (ChromaDB)</h3><div class="hint">Última indexação completa: ${S.ai.chroma.ultima}</div>
+      <div class="field"><label>Coleção</label><select id="idxCol"><option>materiais_algoritmos_c</option><option>materiais_python</option><option>todas as coleções</option></select></div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem"><button class="btn pri" id="idxRun">▶ Reindexar agora</button></div>
+      <div class="progress"><div id="idxBar"></div></div>
+      <div class="log" id="idxLog" style="margin-top:0.625rem">[ocioso] aguardando comando…</div></div>
+  </div>`;
+BIND.bots=()=>{
+  $("#aiTokens").oninput=e=>$("#tkVal").textContent=e.target.value;
+  $("#aiTemp").oninput=e=>$("#tpVal").textContent=e.target.value;
+  $("#aiSave").onclick=()=>{const old=S.ai.tokens;S.ai.tokens=+$("#aiTokens").value;S.ai.temp=+$("#aiTemp").value;S.ai.modelo=$("#aiModel").value;
+    log(`Alterou limite de tokens Groq: ${old} → ${S.ai.tokens}`);toast("Parâmetros salvos e auditados.")};
+  $("#btnPing").onclick=()=>{$("#stGroq").textContent="Verificando…";setTimeout(()=>{$("#stGroq").textContent="Operacional";$("#lat").textContent=(300+Math.floor(Math.random()*250))+" ms";toast("Status atualizado.")},700)};
+  $("#idxRun").onclick=()=>{
+    const col=$("#idxCol").value,L=$("#idxLog"),B=$("#idxBar");L.textContent="";let p=0;
+    const msgs=[`Conectando ao ChromaDB…`,`Coleção alvo: ${col}`,`Lendo 37 novos materiais didáticos…`,`Gerando embeddings (lote 1/3)…`,`Gerando embeddings (lote 2/3)…`,`Gerando embeddings (lote 3/3)…`,`Gravando vetores…`,`✔ Indexação concluída: +184 chunks`];
+    $("#idxRun").disabled=true;
+    const it=setInterval(()=>{L.textContent+=`[${now()}] ${msgs[p]}\n`;L.innerHTML=L.textContent.replace(/\n/g,"<br>");L.scrollTop=1e5;p++;B.style.width=(p/msgs.length*100)+"%";
+      if(p>=msgs.length){clearInterval(it);$("#idxRun").disabled=false;S.ai.chroma.docs+=37;log(`Disparou indexação ChromaDB (${col})`);toast("Indexação concluída.")}},450);
+  };
+};
+
+/* =========================================================
+   TELA 6: RELATÓRIOS
+   ========================================================= */
+VIEWS.relatorios=()=>head("Central de Relatórios","Filtros acadêmicos, pré-visualização e exportação institucional",
+  `<button class="btn" id="exCsv">⬇ CSV</button><button class="btn" id="exXls">⬇ Excel</button><button class="btn pri" id="exPdf">⬇ PDF</button>`)+`
+  <div class="card" style="margin-bottom:1rem"><div class="toolbar" style="margin:0">
+    <div class="field" style="margin:0"><label>Semestre</label><select id="rSem"><option>2026.2</option><option>2026.1</option><option>Todos</option></select></div>
+    <div class="field" style="margin:0"><label>Disciplina</label><select id="rDisc"><option>Todas</option><option>C</option><option>Python</option></select></div>
+    <div class="field" style="margin:0"><label>Período</label><select><option>Últimos 30 dias</option><option>Semestre completo</option><option>Personalizado…</option></select></div>
+    <div class="field" style="margin:0"><label>Agrupar por</label><select><option>Turma</option><option>Disciplina</option></select></div>
+  </div></div>
+  <div class="grid g4" style="margin-bottom:1rem" id="rKpis"></div>
+  <div class="grid g21"><div class="card"><h3>Pré-visualização do relatório</h3><div class="hint" id="rHint"></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Turma</th><th>Disc.</th><th>Alunos</th><th>Interações</th><th>Quizzes</th><th>Média</th><th>Evasão</th><th>Engaj.</th></tr></thead><tbody id="rBody"></tbody></table></div></div>
+  <div class="card"><h3>Evasão por turma</h3><div class="hint">Comparativo (%)</div><div id="rBars"></div></div></div>`;
+function relData(){
+  const sem=$("#rSem").value,d=$("#rDisc").value;
+  return MOCK.relatorio.filter(r=>(sem==="Todos"||r.turma.includes(sem))&&(d==="Todas"||r.disc===d));
+}
+function relRender(){
+  const L=relData(),sum=k=>L.reduce((a,r)=>a+r[k],0),avg=k=>L.length?sum(k)/L.length:0;
+  $("#rKpis").innerHTML=[["Turmas",L.length],["Alunos",sum("alunos")],["Média de notas",avg("media").toFixed(1).replace(".",",")],["Evasão média",avg("evasao").toFixed(1).replace(".",",")+"%"]]
+    .map(k=>`<div class="card kpi"><div class="lbl">${k[0]}</div><div class="val">${k[1]}</div></div>`).join("");
+  $("#rBody").innerHTML=L.map(r=>`<tr><td><b>${r.turma}</b></td><td>${r.disc}</td><td>${r.alunos}</td><td>${r.interacoes.toLocaleString("pt-BR")}</td><td>${r.quizzes}</td><td>${r.media.toString().replace(".",",")}</td><td><span class="badge ${r.evasao>10?"b-bad":r.evasao>7?"b-warn":"b-ok"}">${r.evasao.toString().replace(".",",")}%</span></td><td>${r.engajamento}%</td></tr>`).join("")||`<tr><td colspan="8" class="empty">Nenhum dado para os filtros.</td></tr>`;
+  $("#rHint").textContent=`Semestre ${$("#rSem").value} · Disciplina: ${$("#rDisc").value} · gerado em ${new Date().toLocaleDateString("pt-BR")} ${now()}`;
+  $("#rBars").innerHTML=L.map(r=>`<div class="bar-row" style="grid-template-columns:6.25rem 1fr 2.75rem"><span>${r.turma}</span><div class="bar-bg"><div class="bar-fill" style="width:${r.evasao*6}%;background:${r.evasao>10?"var(--bad)":r.evasao>7?"var(--warn)":"var(--ok)"}"></div></div><b>${r.evasao}%</b></div>`).join("");
+}
+BIND.relatorios=()=>{
+  relRender();$("#rSem").onchange=relRender;$("#rDisc").onchange=relRender;
+  const csv=()=>{const L=relData();return "Turma;Disciplina;Alunos;Interacoes;Quizzes;Media;Evasao(%);Engajamento(%)\n"+L.map(r=>[r.turma,r.disc,r.alunos,r.interacoes,r.quizzes,r.media,r.evasao,r.engajamento].join(";")).join("\n")};
+  $("#exCsv").onclick=()=>{download("relatorio_sti.csv","\ufeff"+csv(),"text/csv;charset=utf-8");log("Exportou relatório institucional (CSV)");toast("CSV exportado.")};
+  $("#exXls").onclick=()=>{download("relatorio_sti.xls","\ufeff"+csv().replace(/;/g,"\t"),"application/vnd.ms-excel");log("Exportou relatório institucional (Excel)");toast("Planilha exportada.")};
+  $("#exPdf").onclick=()=>{log("Exportou relatório institucional (PDF)");toast("Abrindo impressão — escolha “Salvar como PDF”.");setTimeout(()=>window.print(),400)};
+};
+</script>
+</body>
+</html>
