@@ -1,163 +1,156 @@
 {% extends "base.html" %}
-{% block title %}Exercícios — Prof.ia{% endblock %}
-{% block page_title %}Exercícios de fixação{% endblock %}
+{% block title %}Exercícios de Fixação — Prof.ia{% endblock %}
+{% block page_title %}Exercícios de Fixação{% endblock %}
 {% block topbar_extra %}
   <div class="topbar-divider"></div>
-  <div class="topbar-lesson">Tópico: <strong>{{ topico.titulo|default:"Todos" }}</strong></div>
+  <div class="topbar-lesson">{{ quiz.titulo|default:"Minhas práticas e exercícios" }}</div>
 {% endblock %}
 
 {% block body %}
 <div class="panel-body">
 
-  {% if topicos %}
-  <div class="suggestions-row" style="border:none;padding:0 0 14px;">
-    <a class="sug-pill {% if not topico %}active{% endif %}" href="{% url 'exercicios_aluno' %}">Todos</a>
-    {% for t in topicos %}
-    <a class="sug-pill {% if topico.id == t.id %}active{% endif %}" href="?topico={{ t.id }}">{{ t.titulo }}</a>
-    {% endfor %}
-  </div>
-  {% endif %}
+{% if quiz %}
+  {# ================= UM EXERCÍCIO ABERTO ================= #}
 
-  {% for ex in exercicios %}
-  <div class="quiz-q">
-    <div class="contexto-tag">
-      📘 {{ disciplina_atual.nome|default:"Sem disciplina" }}
-      {% if ex.topico %}<span class="dot-sep">·</span> {{ ex.topico.titulo }}{% endif %}
-    </div>
-    <div class="quiz-q-num">Exercício {{ forloop.counter }} · nível {{ ex.get_nivel_display }}</div>
-    <div class="quiz-q-text">{{ ex.enunciado }}</div>
-
-    {% if ex.arquivos.all %}
-      <div class="li-sub">Arquivos de apoio:
-        {% for arquivo in ex.arquivos.all %}
-          <a href="{% url 'baixar_arquivo_exercicio' arquivo.id %}">{{ arquivo.arquivo.name|cut:'exercicios/materiais/' }}</a>{% if not forloop.last %}, {% endif %}
-        {% endfor %}
+  {% if revisao %}
+    {# ---------- Correção (depois de responder, ou "Ver correção") ---------- #}
+    <div class="perf-hero" style="margin-bottom:18px;">
+      <div class="perf-block">
+        <div class="perf-block-title">{% if resultado %}Seu resultado{% else %}Sua melhor nota{% endif %}</div>
+        <div class="stat-value">{{ revisao.nota|floatformat:1 }}</div>
+        <div class="stat-label">{{ revisao.acertos }} de {{ revisao.total }} questões certas{% if resultado %} · +{{ resultado.xp_ganho }} pontos{% endif %}</div>
       </div>
-    {% endif %}
-
-    {% if ex.feedback %}
-      <div class="form-note" style="border-color:{% if ex.acertou %}var(--green){% else %}var(--red){% endif %}">
-        {% if ex.acertou %}✅ Resposta correta! <span class="tag ok">+8 XP</span>{% else %}❌ Ainda não foi dessa vez.{% endif %}
-        {% if ex.gabarito %}<br><strong>Gabarito:</strong> {{ ex.gabarito.resposta_correta }}
-          {% if ex.gabarito.explicacao %}<br>{{ ex.gabarito.explicacao }}{% endif %}
-        {% endif %}
-      </div>
-    {% endif %}
-
-    <section class="exercise-submission" aria-label="Envio da atividade">
-      <div class="submission-status {% if ex.tentativas_enviadas %}is-submitted{% else %}is-pending{% endif %}">
-        <span class="submission-status-icon" aria-hidden="true">{% if ex.tentativas_enviadas %}✓{% else %}↑{% endif %}</span>
-        <div class="submission-status-copy">
-          <strong>{% if ex.tentativas_enviadas %}Atividade entregue{% else %}Entrega pendente{% endif %}</strong>
-          {% if ex.tentativas_enviadas %}
-            <span>Último envio em {{ ex.respondido_em|date:"d/m/Y H:i" }} · {{ ex.tentativas_enviadas }} tentativa{{ ex.tentativas_enviadas|pluralize:"s" }}</span>
-            <span>Você pode enviar uma nova versão. Novos arquivos substituem os anexos anteriores.</span>
-          {% else %}
-            <span>Envie sua resposta em texto, arquivos ou os dois.</span>
-          {% endif %}
-        </div>
-        {% if ex.tentativas_enviadas %}<span class="tag ok">Enviada</span>{% else %}<span class="tag warn">Pendente</span>{% endif %}
-      </div>
-
-      {% if ex.arquivos_resposta_enviada %}
-      <div class="submission-current-files">
-        <div class="submission-files-heading">Arquivos da entrega atual</div>
-        <div class="submission-file-list">
-          {% for arquivo in ex.arquivos_resposta_enviada %}
-          <a class="submission-file-link" href="{% url 'baixar_arquivo_resposta_exercicio' arquivo.id %}">
-            <span aria-hidden="true">▤</span><span>{{ arquivo.arquivo.name|cut:'exercicios/respostas/' }}</span><span aria-hidden="true">↗</span>
-          </a>
-          {% endfor %}
-        </div>
+      {% if resultado.subiu %}
+      <div class="perf-block">
+        <div class="perf-block-title">🎉 Parabéns!</div>
+        <div class="stat-label">Você avançou de nível!</div>
       </div>
       {% endif %}
+    </div>
 
-      <form method="post" action="?topico={{ topico.id }}" enctype="multipart/form-data" class="exercise-submission-form">
-        {% csrf_token %}
-        <input type="hidden" name="exercicio_id" value="{{ ex.id }}" />
-        <div class="form-group">
-          <label class="form-label" for="exercise-answer-{{ ex.id }}">Resposta em texto (opcional)</label>
-          <textarea class="form-input" id="exercise-answer-{{ ex.id }}" name="resposta" rows="3" placeholder="Escreva sua resposta ou observações...">{{ ex.resposta_enviada }}</textarea>
-        </div>
+    {% for item in revisao.itens %}
+    <div class="quiz-q">
+      <div class="quiz-q-num">Questão {{ forloop.counter }} · {% if item.acertou %}✅ Acertou{% else %}❌ Errou{% endif %}</div>
+      <div class="quiz-q-text" style="white-space:pre-wrap;">{{ item.enunciado }}</div>
+      {% for alt in item.alternativas %}
+      <div style="padding:6px 10px;margin:4px 0;border-radius:6px;border:1px solid var(--border2);
+                  {% if alt.correta %}background:rgba(0,200,100,0.12);{% elif alt.marcada %}background:rgba(220,38,38,0.10);{% endif %}">
+        <strong>{{ alt.letra }})</strong> {{ alt.texto }}
+        {% if alt.marcada %}<span style="font-size:12px;color:var(--muted);"> · sua resposta</span>{% endif %}
+        {% if alt.correta %}<span style="font-size:12px;color:var(--muted);"> · correta</span>{% endif %}
+      </div>
+      {% endfor %}
+      {% if item.explicacao %}
+      <div style="margin-top:8px;font-size:13.5px;"><strong>Justificativa:</strong> {{ item.explicacao }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
 
-        <div class="submission-uploader" data-submission-uploader>
-          <input class="submission-file-input" id="exercise-files-{{ ex.id }}" type="file" name="arquivos" multiple
-                 accept=".pdf,.doc,.docx,.odt,.rtf,.xls,.xlsx,.xlsm,.ods,.csv,.ppt,.pptx,.odp,.ipynb,.py,.txt,.md,.json,.xml,.yaml,.yml,.tex,.sql,.r,.java,.c,.cpp,.h,.cs,.js,.png,.jpg,.jpeg,.gif,.webp,.zip" />
-          <label class="submission-dropzone" for="exercise-files-{{ ex.id }}">
-            <span class="submission-upload-icon" aria-hidden="true">↑</span>
-            <span><strong>Arraste os arquivos até aqui</strong><br /><span>ou clique para escolher do dispositivo</span></span>
-          </label>
-          <div class="submission-file-help">PDF, Word, Excel, PowerPoint, CSV, notebook do Colab (.ipynb), texto, código, imagens ou ZIP. Até 5 arquivos · 20 MB cada · 50 MB no total.</div>
-          <div class="submission-selected-files" aria-live="polite"></div>
-        </div>
+    <div style="margin:18px 0 24px;">
+      <a class="btn btn-primary" href="?quiz={{ quiz.id }}">Refazer</a>
+      <a class="btn" href="{% url 'exercicios_aluno' %}">Voltar à lista</a>
+      <a class="btn" href="{% url 'chat_aluno' %}">Voltar ao Tutor IA</a>
+    </div>
 
-        <div class="submission-form-footer">
-          <span>A versão mais recente será considerada na atividade.</span>
-          <button class="btn btn-primary" type="submit">{% if ex.tentativas_enviadas %}Reenviar atividade{% else %}Enviar atividade{% endif %}</button>
+  {% else %}
+    {# ---------- Responder / Refazer ---------- #}
+    <form method="post" action="?quiz={{ quiz.id }}">
+      {% csrf_token %}
+      {% for questao in questoes %}
+      <div class="quiz-q">
+        <div class="quiz-q-num">Questão {{ forloop.counter }}</div>
+        <div class="quiz-q-text" style="white-space:pre-wrap;">{{ questao.enunciado }}</div>
+        <ol type="A" style="margin:8px 0 0;padding-left:22px;">
+          {% for alt in questao.alternativas.all %}
+          <li style="margin:4px 0;">
+            <label class="quiz-alt" style="display:inline-flex;gap:8px;align-items:flex-start;">
+              <input type="radio" name="q_{{ questao.id }}" value="{{ alt.id }}" required />
+              <span>{{ alt.texto }}</span>
+            </label>
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% empty %}
+      <div class="empty">
+        <div class="empty-ico">📝</div>
+        <p>Este conjunto ainda não tem questões cadastradas.</p>
+      </div>
+      {% endfor %}
+      {% if questoes %}
+      <button class="btn btn-primary" type="submit">Enviar respostas</button>
+      <a class="btn" href="{% url 'exercicios_aluno' %}">Voltar</a>
+      {% endif %}
+    </form>
+  {% endif %}
+
+{% else %}
+  {# ================= LISTA ================= #}
+
+  {# ---------- Minhas práticas do Tutor ---------- #}
+  <div class="panel-section">
+    <div class="panel-section-head"><h3>Minhas práticas do Tutor</h3></div>
+    {% for p in praticas %}
+    <div class="list-item" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="li-main">
+        <div class="li-title">{{ p.tema }}</div>
+        <div class="li-sub">
+          {% if p.melhor_nota is None %}
+            <span class="tag">Pendente</span>
+          {% else %}
+            <span class="tag">Melhor nota {{ p.melhor_nota|floatformat:1 }}</span>
+          {% endif %}
         </div>
-      </form>
-    </section>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        {% if p.melhor_nota is None %}
+          <a class="btn btn-primary" href="?quiz={{ p.id }}">Responder</a>
+        {% else %}
+          <a class="btn btn-primary" href="?quiz={{ p.id }}&ver=correcao">Ver correção</a>
+          <a class="btn" href="?quiz={{ p.id }}">Refazer</a>
+        {% endif %}
+        <form method="post" action="{% url 'exercicios_aluno' %}" style="margin:0;"
+              onsubmit="return confirm('Excluir esta prática da sua lista?')">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="excluir_pratica" />
+          <input type="hidden" name="quiz_id" value="{{ p.id }}" />
+          <button type="submit"
+                  style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12.5px;">
+            Excluir
+          </button>
+        </form>
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty">
+      <div class="empty-ico">💬</div>
+      <p>Quando o Tutor oferecer questões no chat e você clicar em <strong>Sim</strong>,<br>elas ficam guardadas aqui para responder ou revisar.</p>
+    </div>
+    {% endfor %}
   </div>
-  {% empty %}
-  <div class="empty"><div class="empty-ico">📝</div><p>Nenhum exercício cadastrado para este tópico.</p></div>
-  {% endfor %}
+
+  {# ---------- Exercícios da professora ---------- #}
+  <div class="panel-section" style="margin-top:24px;">
+    <div class="panel-section-head"><h3>Exercícios da professora</h3></div>
+    <div class="cards-grid">
+      {% for q in gerais %}
+      <a class="tile" href="?quiz={{ q.id }}">
+        <div class="tile-title">{{ q.titulo }}</div>
+        <div class="tile-desc">{{ q.descricao|default:"Exercícios de fixação." }}</div>
+        <div class="tile-foot">
+          <span class="tag">{{ q.questoes.count }} questão(ões)</span>
+        </div>
+      </a>
+      {% empty %}
+      <div class="empty">
+        <div class="empty-ico">📝</div>
+        <p>Nenhum exercício da professora disponível ainda.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+{% endif %}
 
 </div>
-<script>
-  document.querySelectorAll('[data-submission-uploader]').forEach((uploader) => {
-    const input = uploader.querySelector('input[type="file"]');
-    const dropzone = uploader.querySelector('.submission-dropzone');
-    const list = uploader.querySelector('.submission-selected-files');
-    const allowed = new Set('pdf doc docx odt rtf xls xlsx xlsm ods csv ppt pptx odp ipynb py txt md json xml yaml yml tex sql r java c cpp h cs js png jpg jpeg gif webp zip'.split(' '));
-    const formatSize = (bytes) => bytes < 1024 * 1024
-      ? `${Math.max(1, Math.round(bytes / 1024))} KB`
-      : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-
-    const setFiles = (files) => {
-      const selected = [...files];
-      const transfer = new DataTransfer();
-      selected.forEach((file) => transfer.items.add(file));
-      input.files = transfer.files;
-      list.replaceChildren();
-      [...input.files].forEach((file, index) => {
-        const item = document.createElement('div');
-        item.className = 'submission-selected-file';
-        const name = document.createElement('span');
-        name.className = 'submission-selected-file-name';
-        name.textContent = file.name;
-        const size = document.createElement('span');
-        size.className = 'submission-selected-file-size';
-        size.textContent = formatSize(file.size);
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'submission-remove-file';
-        remove.setAttribute('aria-label', `Remover ${file.name}`);
-        remove.textContent = '×';
-        remove.addEventListener('click', () => setFiles([...input.files].filter((_, i) => i !== index)));
-        item.append(name, size, remove);
-        list.append(item);
-      });
-      list.hidden = input.files.length === 0;
-      const total = [...input.files].reduce((sum, file) => sum + file.size, 0);
-      const warnings = [];
-      if (selected.length > 5) warnings.push('Selecione no máximo 5 arquivos.');
-      if (total > 50 * 1024 * 1024) warnings.push('O envio excede 50 MB no total.');
-      if ([...input.files].some((file) => file.size > 20 * 1024 * 1024)) warnings.push('Cada arquivo pode ter até 20 MB.');
-      if ([...input.files].some((file) => !allowed.has(file.name.split('.').pop().toLowerCase()))) warnings.push('Há um formato não permitido. Confira os tipos aceitos acima.');
-      list.classList.toggle('has-upload-warning', warnings.length > 0);
-      list.dataset.warning = warnings.join(' ');
-    };
-
-    input.addEventListener('change', () => setFiles([...input.files]));
-    ['dragenter', 'dragover'].forEach((eventName) => dropzone.addEventListener(eventName, (event) => {
-      event.preventDefault();
-      dropzone.classList.add('is-dragging');
-    }));
-    ['dragleave', 'drop'].forEach((eventName) => dropzone.addEventListener(eventName, (event) => {
-      event.preventDefault();
-      dropzone.classList.remove('is-dragging');
-    }));
-    dropzone.addEventListener('drop', (event) => setFiles([...event.dataTransfer.files]));
-  });
-</script>
 {% endblock %}

@@ -125,6 +125,15 @@ class Usuario(AbstractUser):
         verbose_name="Código da turma (professor)",
         help_text="Código ou identificador interno da turma, se houver.",
     )
+    disciplina_atual = models.ForeignKey(
+        "app.Disciplina",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="alunos",
+        verbose_name="Disciplina atual",
+        help_text="Disciplina à qual o aluno está vinculado.",
+    )
 
     class Meta:
         db_table = "usuario"

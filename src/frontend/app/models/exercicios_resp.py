@@ -9,7 +9,6 @@ para as conquistas de exercícios).
 
 from django.db import models
 from django.conf import settings
-from sti.infraestrutura.validadores_arquivo import validar_arquivo_exercicio
 
 
 class RespostaExercicio(models.Model):
@@ -43,28 +42,3 @@ class RespostaExercicio(models.Model):
 
     def __str__(self):
         return f"{self.usuario} — exercício #{self.exercicio_id}"
-
-
-class ArquivoRespostaExercicio(models.Model):
-    """Arquivo enviado pelo aluno junto com sua resposta ao exercício."""
-
-    resposta_exercicio = models.ForeignKey(
-        RespostaExercicio,
-        on_delete=models.CASCADE,
-        related_name="arquivos_anexados",
-        verbose_name="Resposta do exercício",
-    )
-    arquivo = models.FileField(
-        "Arquivo",
-        upload_to="exercicios/respostas/",
-        validators=[validar_arquivo_exercicio],
-    )
-    enviado_em = models.DateTimeField("Enviado em", auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Arquivo de resposta de exercício"
-        verbose_name_plural = "Arquivos de respostas de exercícios"
-        ordering = ["enviado_em", "id"]
-
-    def __str__(self):
-        return self.arquivo.name

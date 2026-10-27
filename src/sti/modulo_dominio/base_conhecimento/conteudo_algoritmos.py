@@ -7,23 +7,6 @@ from django.db import models
 class ConteudoAlgoritmos(models.Model):
     """Uma unidade de conteúdo (tópico) da disciplina."""
 
-    disciplina = models.ForeignKey(
-        "app.Disciplina",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="topicos_conhecimento",
-        verbose_name="Disciplina",
-    )
-    aula = models.ForeignKey(
-        "app.Licao",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="topicos_base_conhecimento",
-        verbose_name="Aula",
-    )
-
     # As mesmas faixas de nível usadas no perfil do aluno, para que tópico e
     # aluno fiquem na mesma "linguagem" de nível.
     NIVEL_CHOICES = [

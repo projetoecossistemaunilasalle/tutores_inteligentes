@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="{{ request.user.tema|default:'claro' }}" data-motion="{% if request.user.reduzir_animacoes %}reduzido{% else %}normal{% endif %}">
+<html lang="pt-BR" data-theme="{{ request.user.tema|default:'claro' }}">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,6 +20,9 @@
 {% endif %}
 
 <div class="app visible" id="appShell">
+  <button class="menu-btn" id="menuBtn" type="button" aria-label="Abrir menu">☰</button>
+  <div class="menu-fundo" id="menuFundo"></div>
+
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="logo-icon">🎓</div>
@@ -30,12 +33,12 @@
     <div class="sidebar-section">
       <div class="sidebar-label">Acompanhamento</div>
       <a class="nav-item {% if active_nav == 'dashboard' %}active{% endif %}" href="{% url 'dashboard_professor' %}">Desempenho da turma</a>
-      <a class="nav-item {% if active_nav == 'disciplinas' %}active{% endif %}" href="{% url 'gestao_disciplinas' %}">Disciplinas e aulas</a>
+      <a class="nav-item {% if active_nav == 'alunos' %}active{% endif %}" href="{% url 'cadastro_alunos' %}">Alunos</a>
+      <a class="nav-item {% if active_nav == 'disciplinas' %}active{% endif %}" href="{% url 'gestao_disciplinas' %}">Disciplinas e lições</a>
       <a class="nav-item {% if active_nav == 'conteudo' %}active{% endif %}" href="{% url 'gestao_conteudo' %}">Base de conhecimento</a>
-      <a class="nav-item {% if active_nav == 'exercicios' %}active{% endif %}" href="{% url 'gestao_exercicios' %}">Exercícios</a>
-      <a class="nav-item {% if active_nav == 'qa' %}active{% endif %}" href="{% url 'gestao_qa' %}">Repositório de Q&amp;A</a>
+      <a class="nav-item {% if active_nav == 'quizzes' %}active{% endif %}" href="{% url 'gestao_quizzes' %}">Exercícios de Fixação</a>
+      <a class="nav-item {% if active_nav == 'qa' %}active{% endif %}" href="{% url 'gestao_qa' %}">Perguntas Frequentes</a>
       <a class="nav-item {% if active_nav == 'videoaulas' %}active{% endif %}" href="{% url 'gestao_videoaulas' %}">Videoaulas</a>
-      <a class="nav-item {% if active_nav == 'quizzes' %}active{% endif %}" href="{% url 'gestao_quizzes' %}">Quizzes</a>
       <a class="nav-item {% if active_nav == 'configuracoes' %}active{% endif %}" href="{% url 'configuracoes_professor' %}">Configurações</a>
     </div>
     {% else %}
@@ -43,12 +46,11 @@
       <div class="sidebar-label">Menu</div>
       <a class="nav-item {% if active_nav == 'dashboard' %}active{% endif %}" href="{% url 'dashboard_aluno' %}">Meu painel</a>
       <a class="nav-item {% if active_nav == 'chat' %}active{% endif %}" href="{% url 'chat_aluno' %}">Tutor IA</a>
-      <a class="nav-item {% if active_nav == 'exercicios' %}active{% endif %}" href="{% url 'exercicios_aluno' %}">Exercícios</a>
-      <a class="nav-item {% if active_nav == 'quiz' %}active{% endif %}" href="{% url 'quiz_aluno' %}">Quiz</a>
+      <a class="nav-item {% if active_nav == 'exercicios' %}active{% endif %}" href="{% url 'exercicios_aluno' %}">Exercícios de Fixação</a>
       <a class="nav-item {% if active_nav == 'videoaulas' %}active{% endif %}" href="{% url 'videoaulas_aluno' %}">Videoaulas</a>
       <a class="nav-item {% if active_nav == 'historico' %}active{% endif %}" href="{% url 'historico_aluno' %}">Histórico</a>
-      <a class="nav-item {% if active_nav == 'conquistas' %}active{% endif %}" href="{% url 'conquistas_aluno' %}">Conquistas</a>
-      <a class="nav-item {% if active_nav == 'configuracoes' %}active{% endif %}" href="{% url 'configuracoes_aluno' %}">Configurações</a>
+      <a class="nav-item {% if active_nav == 'conquistas' %}active{% endif %}" href="{% url 'conquistas_aluno' %}">Meu Desempenho</a>
+      <a class="nav-item {% if active_nav == 'configuracoes' %}active{% endif %}" href="{% url 'configuracoes_aluno' %}">Perfil</a>
     </div>
     {% endif %}
 
@@ -102,6 +104,17 @@
   </main>
 </div>
 
+<script>
+  // Menu recolhivel no celular: o botao abre/fecha; tocar fora fecha.
+  (function () {
+    var app = document.getElementById("appShell");
+    var btn = document.getElementById("menuBtn");
+    var fundo = document.getElementById("menuFundo");
+    if (!app || !btn) return;
+    btn.addEventListener("click", function () { app.classList.toggle("menu-aberto"); });
+    fundo.addEventListener("click", function () { app.classList.remove("menu-aberto"); });
+  })();
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

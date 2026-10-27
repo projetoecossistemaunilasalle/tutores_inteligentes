@@ -100,7 +100,7 @@
       <div style="flex:1;">
         <div class="settings-row-label">Reiniciar meu progresso</div>
         <div class="settings-row-desc">
-          Apaga seu nível, XP, sequência de dias, aulas concluídas e conquistas.
+          Apaga seu nível, XP, sequência de dias, lições concluídas e conquistas.
           O histórico de conversas com o tutor não é afetado. Essa ação não pode ser desfeita.
         </div>
       </div>
@@ -116,7 +116,7 @@
       <h3>Reiniciar progresso?</h3>
       <button class="modal-close" onclick="document.getElementById('resetModal').classList.add('hidden')">✕</button>
     </div>
-    <p class="modal-sub">Isso vai zerar seu nível, XP, sequência de dias, aulas concluídas e conquistas. Não pode ser desfeito.</p>
+    <p class="modal-sub">Isso vai zerar seu nível, XP, sequência de dias, lições concluídas e conquistas. Não pode ser desfeito.</p>
     <form method="post" action="{% url 'configuracoes_aluno' %}">
       {% csrf_token %}
       <input type="hidden" name="acao" value="zerar_progresso" />

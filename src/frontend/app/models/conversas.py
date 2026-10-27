@@ -34,7 +34,7 @@ class Conversa(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="conversas",
-        verbose_name="Aula",
+        verbose_name="Licao",
     )
 
     # ------------------------------------------------------------------ #

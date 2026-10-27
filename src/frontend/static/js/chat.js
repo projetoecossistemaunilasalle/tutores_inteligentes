@@ -125,6 +125,7 @@ async function sendMessage() {
       conversationHistory.push({ role: 'assistant', content: data.resposta });
       addMessage('ai', formatMessage(data.resposta));
       aplicarGanhos(data);
+      oferecerExercicios(data.exercicios || [], text);
     }
   } catch (err) {
     typingEl.remove();
@@ -150,7 +151,9 @@ async function callSystemAI(pergunta) {
   return data;
 }
 
-/* Reflete XP, nível e conquistas ganhas na sidebar e no chat. */
+/* Reflete XP e nível na barra lateral e o progresso da lição.
+   Os avisos de XP, nível e conquistas NÃO aparecem mais dentro do chat:
+   continuam sendo contados e aparecem na barra lateral e em Meu Desempenho. */
 function aplicarGanhos(data) {
   const fill = document.getElementById('sidebarXpFill');
   const txt = document.getElementById('sidebarNivelTxt');
@@ -161,22 +164,9 @@ function aplicarGanhos(data) {
     txt.textContent = `Nível ${data.nivel} · ${data.xp_total} XP`;
   }
 
-  if (data.xp_ganho) {
-    addSystemChip(`+${data.xp_ganho} XP por essa interação`);
-  }
-  if (data.subiu_de_nivel) {
-    addSystemChip(`🎉 Você subiu para o nível ${data.nivel}!`);
-  }
-  (data.conquistas_novas || []).forEach(c => {
-    addSystemChip(`🏆 Conquista desbloqueada: ${c.icone || ''} ${c.nome} (+${c.xp_bonus} XP)`);
-  });
-
   if (typeof data.etapa_atual === 'number' && data.licao_total) {
     lessonProgress = data.etapa_atual;
     renderSteps();
-    if (data.licao_concluida) {
-      addSystemChip('✅ Aula concluída! +20 XP de bônus');
-    }
   }
 }
 
@@ -207,8 +197,162 @@ async function callCustomAI(cfg, systemPrompt, history) {
 
 function sendSuggestion(text) { document.getElementById('userInput').value = text; sendMessage(); }
 
+/* ---------- Exercícios de fixação (questões das provas do professor) ---------- */
+/* Cada "Sim" cria uma PRÁTICA PESSOAL do aluno (um quiz só dele), que fica
+   salva em Exercícios de Fixação para responder depois ou revisar. */
+
+function contarAlternativas(texto) {
+  return (texto || '').split('\n').filter(l => /^\s*[A-Ea-e]\)/.test(l)).length;
+}
+
+/* Depois da resposta do tutor: pergunta se o aluno quer praticar */
+function oferecerExercicios(questoes, pergunta) {
+  questoes = (questoes || []).filter(q => contarAlternativas(q.texto) >= 2);
+  if (!questoes.length) return;
+
+  const msg = addMessage('ai',
+    formatMessage('Quer praticar com algumas questões?') +
+    `<div class="ex-acoes" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+       <button class="btn btn-primary ex-sim">Sim</button>
+       <button class="btn ex-nao">Agora não</button>
+     </div>`);
+
+  msg.querySelector('.ex-sim').onclick = () => iniciarPratica(msg, questoes, pergunta);
+  msg.querySelector('.ex-nao').onclick = () => {
+    msg.querySelector('.ex-acoes').remove();
+    addMessage('ai', formatMessage('OK! Qual a sua próxima dúvida?'));
+    document.getElementById('userInput').focus();
+  };
+}
+
+/* Cria a prática no servidor e mostra as questões */
+async function iniciarPratica(msg, questoes, pergunta) {
+  const acoes = msg.querySelector('.ex-acoes');
+  acoes.innerHTML = '<span style="font-size:12.5px;color:var(--muted);">Preparando as questões...</span>';
+
+  let data;
+  try {
+    const resp = await fetch(CFG.praticaUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CFG.csrfToken },
+      body: JSON.stringify({ pergunta, ids: questoes.map(q => q.id), disciplina_id: CFG.disciplinaId })
+    });
+    data = await resp.json();
+    if (!resp.ok) throw new Error(data.erro || 'Não foi possível montar as questões agora.');
+  } catch (e) {
+    acoes.innerHTML = `<span style="font-size:12.5px;color:var(--red);">⚠️ ${escapeHtml(e.message)}</span>`;
+    return;
+  }
+  acoes.remove();
+  mostrarQuestoes(data);
+}
+
+/* Mostra todas as questões da prática, com um único botão Corrigir */
+function mostrarQuestoes(pratica) {
+  const grupo = 'ex' + Date.now();
+  const total = pratica.questoes.length;
+  let html = '';
+
+  pratica.questoes.forEach((q, i) => {
+    html += `<div class="ex-questao" data-qid="${q.id}" style="${i ? 'margin-top:16px;padding-top:14px;border-top:1px solid var(--border2);' : ''}">`;
+    html += `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Questão ${i + 1} de ${total}</div>`;
+    html += `<div style="white-space:pre-wrap;">${escapeHtml(q.enunciado)}</div>`;
+    html += '<div class="ex-alts" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">';
+    q.alternativas.forEach(a => {
+      html += `<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;padding:6px 8px;border:1px solid var(--border2);border-radius:6px;">
+        <input type="radio" name="${grupo}_${i}" value="${a.id}" style="margin-top:3px;">
+        <span><strong>${a.letra})</strong> ${escapeHtml(a.texto)}</span></label>`;
+    });
+    html += '</div><div class="ex-feedback" style="margin-top:8px;font-size:13.5px;"></div></div>';
+  });
+  html += `<div class="ex-rodape" style="margin-top:14px;">
+    <button class="btn btn-primary ex-corrigir">Corrigir</button>
+    <div style="margin-top:6px;font-size:12px;color:var(--muted);">Esta prática fica salva em Exercícios de Fixação.</div>
+  </div>`;
+
+  const msg = addMessage('ai', html);
+  msg.querySelector('.ex-corrigir').onclick = () => corrigirQuestoes(msg, pratica, grupo);
+}
+
+/* Aviso dentro do bloco de questões (ex.: faltou responder) */
+function avisoExercicio(msg, texto) {
+  let el = msg.querySelector('.ex-aviso');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'ex-aviso';
+    el.style.cssText = 'margin-top:8px;font-size:13px;color:var(--red);';
+    msg.querySelector('.ex-rodape').appendChild(el);
+  }
+  el.textContent = '⚠️ ' + texto;
+}
+
+/* Envia as respostas, grava a tentativa no servidor e mostra o resultado */
+async function corrigirQuestoes(msg, pratica, grupo) {
+  const respostas = {};
+  for (let i = 0; i < pratica.questoes.length; i++) {
+    const marcada = msg.querySelector(`input[name="${grupo}_${i}"]:checked`);
+    if (!marcada) { avisoExercicio(msg, 'Responda todas as questões antes de corrigir.'); return; }
+    respostas[pratica.questoes[i].id] = marcada.value;
+  }
+
+  const botao = msg.querySelector('.ex-corrigir');
+  botao.disabled = true;
+  botao.textContent = 'Corrigindo...';
+
+  let data;
+  try {
+    const resp = await fetch(CFG.corrigirUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CFG.csrfToken },
+      body: JSON.stringify({ quiz_id: pratica.quiz_id, respostas })
+    });
+    data = await resp.json();
+    if (!resp.ok) throw new Error(data.erro || 'Não foi possível corrigir agora.');
+  } catch (e) {
+    botao.disabled = false;
+    botao.textContent = 'Corrigir';
+    avisoExercicio(msg, e.message);
+    return;
+  }
+
+  // Em cada questão: trava as alternativas, pinta certa/errada e mostra a justificativa
+  (data.resultados || []).forEach(r => {
+    const bloco = msg.querySelector(`.ex-questao[data-qid="${r.questao_id}"]`);
+    if (!bloco) return;
+    const marcada = respostas[r.questao_id];
+    bloco.querySelectorAll('.ex-alts label').forEach(l => {
+      const radio = l.querySelector('input');
+      radio.disabled = true;
+      if (String(radio.value) === String(r.alternativa_correta_id)) l.style.background = 'rgba(0,200,100,0.12)';
+      else if (String(radio.value) === String(marcada) && !r.correta) l.style.background = 'rgba(220,38,38,0.10)';
+    });
+    let fb = r.correta
+      ? '✅ <strong>Correto!</strong>'
+      : `❌ <strong>Não foi dessa vez.</strong> A resposta certa é <strong>${r.letra_correta}</strong>.`;
+    if (r.justificativa) fb += `<div style="margin-top:4px;">${escapeHtml(r.justificativa)}</div>`;
+    bloco.querySelector('.ex-feedback').innerHTML = fb;
+  });
+
+  // Resultado final com a nota (0 a 10)
+  const nota = Number(data.nota).toFixed(1).replace('.', ',');
+  msg.querySelector('.ex-rodape').innerHTML =
+    `<div style="font-size:14px;"><strong>Resultado:</strong> você acertou ${data.acertos} de ${data.total}, nota <strong>${nota}</strong>. ` +
+    (data.acertos === data.total ? 'Excelente! 🎉' : 'Se quiser, pergunte sobre o que ficou em dúvida.') +
+    `</div><div style="margin-top:6px;font-size:12px;color:var(--muted);">Você pode revisar esta prática em Exercícios de Fixação.</div>`;
+
+  if (data.xp_ganho) aplicarGanhos(data);
+  const area = document.getElementById('chatArea');
+  area.scrollTop = area.scrollHeight;
+}
+
+
 /* ---------- Utilidades ---------- */
 function formatMessage(text) {
+  // Converte o Markdown do tutor (negrito, titulos, listas, codigo) em HTML seguro
+  if (window.marked && window.DOMPurify) {
+    return DOMPurify.sanitize(marked.parse(text || '', { breaks: true, gfm: true }));
+  }
+  // Reserva: formatacao simples, caso as bibliotecas nao carreguem
   return text
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')

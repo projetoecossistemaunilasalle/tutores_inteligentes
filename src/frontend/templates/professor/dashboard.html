@@ -3,10 +3,7 @@
 {% block page_title %}Desempenho da turma{% endblock %}
 {% block topbar_extra %}
   <div class="topbar-divider"></div>
-  <div class="topbar-lesson">Turma: <strong>{{ turma_nome }}</strong>
-    {% if request.user.turma_codigo %}<span class="li-sub">· {{ request.user.turma_codigo }}</span>{% endif %}
-    {% if request.user.get_turma_turno_display %}<span class="tag">{{ request.user.get_turma_turno_display }}</span>{% endif %}
-  </div>
+  <div class="topbar-lesson">Turma: <strong>{{ turma_nome }}</strong></div>
   <div class="topbar-actions"><div class="online-badge"><span class="online-dot"></span> Dados atualizados hoje</div></div>
 {% endblock %}
 
@@ -16,15 +13,143 @@
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-value">{{ total_alunos }}</div><div class="stat-label">Alunos</div></div>
     <div class="stat-card"><div class="stat-value">{{ total_interacoes }}</div><div class="stat-label">Interações com o tutor</div></div>
-    <div class="stat-card"><div class="stat-value">{{ total_exercicios }}</div><div class="stat-label">Exercícios ativos</div></div>
+    <div class="stat-card">
+      <div class="stat-value">{% if media_turma is not None %}{{ media_turma|floatformat:1 }}{% else %}—{% endif %}</div>
+      <div class="stat-label">Média da turma nos exercícios</div>
+    </div>
     <div class="stat-card"><div class="stat-value">{{ total_videoaulas }}</div><div class="stat-label">Videoaulas</div></div>
   </div>
+
+      <div class="panel-section">
+    <div class="panel-section-head"><h3>Visão geral</h3></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
+      <div>
+        <div class="li-title" style="margin-bottom:8px;">Alunos por faixa de média</div>
+        <div style="position:relative;height:240px;"><canvas id="graficoFaixas"></canvas></div>
+      </div>
+      <div>
+        <div class="li-title" style="margin-bottom:8px;">Questões mais erradas pela turma</div>
+        {% if graficos.questoes.valores %}
+        <div style="position:relative;height:240px;"><canvas id="graficoQuestoes"></canvas></div>
+        {% else %}
+        <div class="field-hint">Ainda não há erros registrados nos exercícios.</div>
+        {% endif %}
+      </div>
+      <div>
+        <div class="li-title" style="margin-bottom:8px;">Temas com mais dúvidas no chat</div>
+        {% if graficos.temas.valores %}
+        <div style="position:relative;height:240px;"><canvas id="graficoTemas"></canvas></div>
+        {% if graficos.temas.sem_tema %}<div class="field-hint" style="margin-top:4px;">+ {{ graficos.temas.sem_tema }} mensagens sem tema (saudações, sugestões)</div>{% endif %}
+        {% else %}
+        <div class="field-hint">Ainda não há perguntas classificadas.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {{ graficos.faixas|json_script:"dados-faixas" }}
+  {{ graficos.questoes|json_script:"dados-questoes" }}
+  {{ graficos.temas|json_script:"dados-temas" }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <script>
+  (function () {
+    if (typeof Chart === "undefined") return;
+    var faixas = JSON.parse(document.getElementById("dados-faixas").textContent);
+    var questoes = JSON.parse(document.getElementById("dados-questoes").textContent);
+    var temas = JSON.parse(document.getElementById("dados-temas").textContent);
+
+    new Chart(document.getElementById("graficoFaixas"), {
+      type: "doughnut",
+      data: {
+        labels: faixas.rotulos,
+        datasets: [{
+          data: faixas.valores,
+          backgroundColor: ["#d92d20", "#f79009", "#12b76a", "#98a2b3"],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        cutout: "60%",
+                plugins: {
+          legend: {
+            position: "left",
+            align: "start",
+            labels: {
+              generateLabels: function (chart) {
+                var itens = Chart.overrides.doughnut.plugins.legend.labels.generateLabels(chart);
+                var dados = chart.data.datasets[0].data;
+                var total = dados.reduce(function (a, b) { return a + b; }, 0);
+                return itens.map(function (item, i) {
+                  var n = dados[i];
+                  var pct = total ? Math.round(n * 100 / total) : 0;
+                  item.text += ": " + n + (n === 1 ? " aluno" : " alunos") + " (" + pct + "%)";
+                  return item;
+                });
+              }
+            }
+          }
+        }
+      }
+    });
+
+    var canvasQ = document.getElementById("graficoQuestoes");
+    if (canvasQ) {
+      new Chart(canvasQ, {
+        type: "bar",
+        data: {
+          labels: questoes.rotulos,
+          datasets: [{ label: "Erros", data: questoes.valores, backgroundColor: "#d92d20",
+                       borderRadius: 4, maxBarThickness: 28 }]
+        },
+        options: {
+          indexAxis: "y",
+          maintainAspectRatio: false,
+          scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { title: function (itens) { return questoes.completos[itens[0].dataIndex]; } } }
+          }
+        }
+      });
+    }
+
+    var canvasT = document.getElementById("graficoTemas");
+    if (canvasT) {
+      new Chart(canvasT, {
+        type: "bar",
+        data: {
+          labels: temas.rotulos,
+          datasets: [{ label: "Perguntas", data: temas.valores, backgroundColor: "#1570ef",
+                       borderRadius: 4, maxBarThickness: 28 }]
+        },
+        options: {
+          indexAxis: "y",
+          maintainAspectRatio: false,
+          scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+  })();
+  </script>
 
   <div class="panel-section">
     <div class="panel-section-head"><h3>Alunos</h3></div>
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Aluno</th><th>Nível</th><th>Estado emocional</th><th>Interações</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Nível</th>
+            <th>Estado emocional</th>
+            <th>Interações</th>
+            <th>Exercícios feitos</th>
+            <th>Média</th>
+            <th>Última atividade</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
         {% for a in alunos %}
           <tr>
@@ -32,10 +157,13 @@
             <td><span class="tag">{{ a.get_nivel_proficiencia_display }}</span></td>
             <td>{{ a.estado_emocional|default:"—" }}</td>
             <td>{{ a.num_interacoes }}</td>
+            <td>{{ a.exercicios_feitos }}</td>
+            <td>{% if a.media_exercicios is not None %}{{ a.media_exercicios|floatformat:1 }}{% else %}—{% endif %}</td>
+            <td>{{ a.ultima_atividade|date:"d/m/Y"|default:"—" }}</td>
             <td><a class="btn" href="{% url 'detalhe_aluno' a.id %}">Ver detalhes</a></td>
           </tr>
         {% empty %}
-          <tr><td colspan="5"><div class="empty"><div class="empty-ico">👥</div><p>Nenhum perfil de aluno no banco (Grupo 1).</p></div></td></tr>
+          <tr><td colspan="8"><div class="empty"><div class="empty-ico">👥</div><p>Nenhum perfil de aluno no banco (Grupo 1).</p></div></td></tr>
         {% endfor %}
         </tbody>
       </table>

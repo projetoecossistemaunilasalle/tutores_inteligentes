@@ -24,7 +24,7 @@
     <div class="perf-block">
       <div class="perf-block-title">Resumo</div>
       <div class="stat-grid">
-        <div class="stat-card"><div class="stat-value">{{ licoes_concluidas }}</div><div class="stat-label">Aulas concluídas</div></div>
+        <div class="stat-card"><div class="stat-value">{{ licoes_concluidas }}</div><div class="stat-label">Lições concluídas</div></div>
         <div class="stat-card"><div class="stat-value">{{ licoes_andamento }}</div><div class="stat-label">Em andamento</div></div>
         <div class="stat-card"><div class="stat-value">{{ nivel.streak_dias|default:0 }}</div><div class="stat-label">Sequência (dias)</div></div>
         <div class="stat-card"><div class="stat-value">{{ conquistas_total }}</div><div class="stat-label">Conquistas</div></div>
@@ -33,7 +33,7 @@
   </div>
 
   <div class="panel-section">
-    <div class="panel-section-head"><h3>Progresso nas aulas</h3></div>
+    <div class="panel-section-head"><h3>Progresso nas lições</h3></div>
     {% for p in progressos %}
     <div class="list-item">
       <div class="li-main">
@@ -46,7 +46,7 @@
       </div>
     </div>
     {% empty %}
-    <div class="empty"><div class="empty-ico">📚</div><p>Você ainda não iniciou nenhuma aula. Abra o tutor para começar.</p></div>
+    <div class="empty"><div class="empty-ico">📚</div><p>Você ainda não iniciou nenhuma lição. Abra o tutor para começar.</p></div>
     {% endfor %}
   </div>
 
